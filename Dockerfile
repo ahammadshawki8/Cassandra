@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir -r requirements-service.txt
 
 COPY cassandra ./cassandra
 COPY demo ./demo
+# The deck is served at /deck so it can be opened full screen while recording.
+COPY docs ./docs
 
 # Cloud Run supplies PORT. Keep one worker: the audit holds process level state
 # (the event bus and the in flight lock) that a second worker would not see.
