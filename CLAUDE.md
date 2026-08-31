@@ -76,10 +76,15 @@ The Semantic Auditor is the only hunter that fundamentally requires a language m
 
 ### Operator surface
 
-- **Live audit dashboard.** The workbook rendered as a grid with findings highlighted in place.
-- **Blast radius overlay.** Downstream cells illuminate as impact propagates through the DAG. This is the single clearest visual explanation of why a finding matters.
-- **Agent trace stream.** The live reasoning chain, including rejected patches and the reason for rejection.
-- **Before and after diff.** The headline figure, previous value against corrected value.
+Strictly linear, and deliberately small. The person looking at this has never seen the tool before.
+
+- **One control.** A single button. Nothing else is on screen at rest.
+- **One activity line.** What she is doing right now, in plain words, rather than a log firehose.
+- **One headline.** The figure that was wrong, struck through, beside the figure that is right.
+- **The fixes.** Formula before and after, the value that moved, and whether it was proven or needs a human.
+- **A rejected patch is promoted, not buried.** When a repair fails verification and is retried, the interface says so in words. It is the clearest evidence the loop is real.
+
+Everything else, the full trace included, is collapsed behind one link. Design direction is kawaii in shape and palette, professional in typography: every formula and figure is set in a mono face, because a tool auditing financial models cannot read as a toy.
 
 ---
 
@@ -94,81 +99,37 @@ The Semantic Auditor is the only hunter that fundamentally requires a language m
 
 ### User flow
 
-Strictly linear. There are no orphan features and nothing the user must discover.
+One column, three states. Nothing appears until it is relevant, and there are no orphan features.
 
 ```
-1. Drop workbook into bucket
-        |
-2. Cassandra wakes automatically (no user action)
-        |
-3. Watch findings appear, ranked by materiality
-        |
-4. Click a finding, see its blast radius on the grid
-        |
-5. See the proposed patch and its verification verdict
-        |
-6. Accept or dismiss
-        |
-7. Drop the next version. Cassandra diffs it against this one.
+        ( mascot )
+        Cassandra
+   she checks the spreadsheet your numbers
+   come from, and proves every fix
+
+   +----------------------------+
+   |  [ Check this workbook ]   |   one button, the only control
+   +----------------------------+
+                |
+   +----------------------------+
+   | Writing a fix              |   one line, the current activity
+   | ......o                    |
+   +----------------------------+
+                |
+   +----------------------------+
+   | Operating Income           |
+   | 6,246,545 -> -2,481,455    |   the number that was wrong
+   |      off by 8,728,000      |
+   +----------------------------+
+                |
+   five fixes, each proven by recalculation
 ```
 
-The user takes exactly one deliberate action to start: dropping a file. Everything before step 6 is autonomous.
+The autonomous path needs no interface at all: a workbook landing in the bucket starts everything. The button exists so the whole thing can be shown without waiting on an upload.
 
 ### System diagram
 
-```
-   workbook.xlsx
-        |
-        v
-  [ Cloud Storage ]  --object.finalize-->  [ Pub/Sub ]
-                                                |
-                                                v
-                                     [ Cloud Run  scale to zero ]
-                                                |
-                                    +-----------+-----------+
-                                    |                       |
-                                    v                       v
-                        [ CARTOGRAPHER ]            [ Firestore ]
-                        deterministic, no LLM        run state
-                        parse / DAG / cluster        findings
-                        R1C1 signatures              patch attempts
-                                    |                dismissals
-                                    v                lineage
-                    +---------------+---------------+
-                    |    HUNTING FLEET  (parallel)  |
-                    |    read only graph access     |
-                    |                               |
-                    |  Hardcode      Range          |
-                    |  Pattern       Sign           |
-                    |  Reference     Semantic       |
-                    +---------------+---------------+
-                                    |
-                                    v
-                          [ ADJUDICATOR ]
-                     rank by blast radius x impact
-                                    |
-                                    v
-                            [ PATCHER ]
-                       proposes concrete cell edit
-                                    |
-                                    v
-                            [ VERIFIER ] <--------+
-                       recalculate the workbook   |
-                                    |             |
-                          +---------+---------+   |
-                          |                   |   |
-                       REJECT               PASS  |
-                    with reason ---------------->-+
-                    (bounded retries,          |
-                     then quarantine)          v
-                                        [ Dashboard ]
-                                     grid / blast radius
-                                     trace / value diff
-
-   Cross cutting:  OpenTelemetry -> Cloud Trace   (full reasoning chain)
-                   Gemini 3.5 Flash via Vertex AI (all agent reasoning)
-                   Google ADK                     (fleet orchestration)
-```
+See `docs/architecture.md`, which carries three mermaid diagrams: the whole system, the verification loop as a sequence, and where the model is trusted against where it is not. GitHub renders them inline.
 
 ### Stack
 
@@ -377,12 +338,25 @@ Every one of these was real and would have shipped:
 - Recalculation proves a repair is mechanically sound. It cannot prove the repair expresses what the author meant. Where the workbook no longer holds enough information to infer intent, the clearest case being a reference whose target was deleted, the repair is labelled `needs_human_intent` rather than presented as proven.
 - `formulas` does not implement every Excel function. Anything it cannot evaluate degrades to unverified and is never reported as proven.
 
+### Deployed and proven in the cloud
+
+- **Service:** `https://cassandra-gibp4zik7a-uc.a.run.app`
+- **`/api/health`** reports `store: firestore`, `model: gemini-3.5-flash`, `vertex: TRUE`
+- **The autonomous path works end to end.** A workbook dropped into the bucket fired `OBJECT_FINALIZE`, Pub/Sub pushed to Cloud Run, and the audit ran with no human action: 8 findings, 5 repaired, headline `Operating Income 6,246,545 -> -2,481,455`, persisted to Firestore.
+
+### Two more traps, both cloud specific
+
+8. **Cloud Run reserves `/healthz`.** It is answered by Google's frontend and never reaches the container, so the endpoint returns Google's own 404 page while every other route serves normally. It reads exactly like a service that failed to start. Health lives at `/api/health`.
+9. **The Cloud Build service account lacks roles it needs by default.** Without `storage.objectViewer` the build cannot read the source archive it was just handed, which surfaces as a 403 on an object that plainly exists.
+10. **numpy scalars broke the detail response.** Values reaching Firestore as numpy floats encode to a different byte length than the default encoder measures when setting Content-Length, so the body overran its own header mid response. Detail payloads are now built and measured in one pass.
+
 ### Remaining
 
-- Cloud Run deploy and the Pub/Sub push subscription
-- README with spin up instructions and prior art
-- Architecture diagram
+- README spin up instructions verified against a clean clone
 - Demo video, recorded by teammate
+- Devpost submission
+
+---
 
 ## Working Rules
 
