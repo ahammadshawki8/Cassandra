@@ -275,10 +275,10 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 
 - [x] Resolve Python toolchain (3.11 venv, verify `formulas` and `google-adk` install)
 - [x] Install and authenticate `gcloud` CLI
-- [ ] Create GCP project, enable billing, enable APIs (Vertex AI, Cloud Run, Storage, Pub/Sub, Firestore, Cloud Trace)
-- [ ] Create the ingestion bucket and Pub/Sub topic with the object finalize notification
+- [x] Create GCP project, enable billing, enable APIs (Vertex AI, Cloud Run, Storage, Pub/Sub, Firestore, Cloud Trace)
+- [x] Create the ingestion bucket and Pub/Sub topic with the object finalize notification
 - [ ] Deploy a stub Cloud Run service and prove the end to end pipe with a dummy file
-- [ ] Author the demo workbook: a realistic multi sheet financial model with planted defects, one of which is designed so the first patch attempt fails verification
+- [x] Author the demo workbook: a realistic multi sheet financial model with planted defects, one of which is designed so the first patch attempt fails verification
 - [x] Repository scaffold, `.gitignore`, dependency manifest
 
 ### Phase 1 — Deterministic core
@@ -292,31 +292,31 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 
 ### Phase 2 — Agent fleet
 
-- [ ] ADK agent scaffold with Vertex AI and Gemini 3.5 Flash wired
-- [ ] Tool layer with per agent scoping enforced
-- [ ] Six hunter agents
-- [ ] Adjudicator with materiality ranking
-- [ ] Patcher producing structured cell edits
-- [ ] Verifier with recalculation, predicted versus actual assertion, and rejection reasons
-- [ ] Bounded retry and quarantine handling
-- [ ] Firestore persistence for runs, findings, attempts, verdicts
+- [x] ADK agent scaffold with Vertex AI and Gemini 3.5 Flash wired
+- [x] Tool layer with per agent scoping enforced
+- [x] Six hunter agents
+- [x] Adjudicator with materiality ranking
+- [x] Patcher producing structured cell edits
+- [x] Verifier with recalculation, predicted versus actual assertion, and rejection reasons
+- [x] Bounded retry and quarantine handling
+- [x] Firestore persistence for runs, findings, attempts, verdicts
 - [ ] OpenTelemetry instrumentation to Cloud Trace
-- [ ] Idempotency on Pub/Sub message ID
+- [x] Idempotency on Pub/Sub message ID
 
 ### Phase 3 — Operator surface
 
-- [ ] Live dashboard shell
-- [ ] Workbook grid renderer with in place finding highlights
-- [ ] Blast radius overlay animation
-- [ ] Agent trace stream including rejections
-- [ ] Before and after value diff
-- [ ] Materiality ranked finding list with accept and dismiss
+- [x] Live dashboard shell
+- [x] Workbook grid renderer with in place finding highlights
+- [x] Blast radius overlay animation
+- [x] Agent trace stream including rejections
+- [x] Before and after value diff
+- [x] Materiality ranked finding list with accept and dismiss
 
 ### Phase 4 — Regression sentinel and hardening
 
-- [ ] Version diff between workbook revisions
+- [x] Version diff between workbook revisions
 - [ ] Root cause attribution from moved output back to originating edit
-- [ ] Dismissal memory across runs
+- [x] Dismissal memory across runs
 - [ ] Lightweight agent registry with capability manifests and versions
 - [ ] README with spin up instructions and prior art section
 - [ ] Architecture diagram asset
@@ -334,49 +334,55 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 
 ## Current State
 
-**Status:** Phase 0 in progress.
+**Status:** Phase 3 in progress. Core, agents, and cloud infrastructure all live and working.
 
-**Done**
-- Project direction locked: continuous regression sentinel with closed loop verified repair
-- Competitive and academic landscape researched, differentiation established
-- Public repository created at `github.com/ahammadshawki8/Cassandra`
-- Python 3.11 venv established at `.venv` (system default is 3.14, too new for the scientific stack)
-- **Calculation oracle de risked.** `formulas` 1.3.4 installs and imports cleanly on 3.11. This was the single largest technical risk and it is now retired.
-- `google-adk` 2.8.0 and `google-genai` 2.20.0 installed and importing
-- `opentelemetry-sdk` 1.42.1 arrives as an ADK dependency, so the observability layer needs no extra install
-- This file, committed and pushed
+### Verified working end to end
 
-- Google Cloud CLI 582.0.0 installed at `C:\Users\Shawki\google-cloud-sdk`, bundled python build, no admin rights. Note for anyone reproducing this: the documented rapid channel URL returns 404, the working path is `/rapid/downloads/`.
-- **Phase 1 deterministic core complete.** `model`, `refs`, `parser`, `graph`, `oracle`.
-- **The verifier is proven end to end.** It accepts a correct patch and rejects all four failure modes: a hallucinated prediction, a no op patch, a patch producing an Excel error, and any patch causing collateral movement outside the target's blast radius. The source workbook is never mutated.
-- 30 tests passing via `pytest`
+- **Vertex AI with `gemini-3.5-flash`.** Note for anyone reproducing this: Gemini 3.x is served only from `location=global` on Vertex. `us-central1` returns 404 for every 3.x model while serving 2.5 happily, which reads as "no access" and is not.
+- **Event pipeline proven.** A workbook uploaded to the bucket fires `OBJECT_FINALIZE` and the message arrives on the `cassandra-worker` subscription.
+- **Firestore** `(default)`, nam5, native mode.
+- **The full audit pipeline**, parse through verified repairs, on the demo workbook in about two minutes.
 
-**In progress**
-- Phase 2, the agent fleet
+### What the agents actually did
 
-**Blocked / needs the user**
-- `gcloud auth login` must be run by the user, it requires a browser
-- GCP project ID and confirmation that billing is enabled
+- The Semantic Auditor caught `PL!C10`, labelled Net Margin while computing gross margin. No deterministic rule can find this.
+- The Adjudicator dismissed `Revenue!B5` unprompted and for the right reason: a boundary cell legitimately seeding a series from an assumption.
+- The patch loop self corrected on `Revenue!D12`. Attempt one was rejected by recalculation as changing nothing; attempt two recognised the defect as latent and verified by counterfactual.
 
-**Verified environment**
+### Infrastructure
 
-| Component | Version |
+| Resource | Identifier |
 | --- | --- |
-| Python (project venv) | 3.11 |
-| `formulas` | 1.3.4 |
-| `google-adk` | 2.8.0 |
-| `google-genai` | 2.20.0 |
-| `opentelemetry-sdk` | 1.42.1 |
-| `networkx` | 3.6.1 |
-| `openpyxl` | 3.1.5 |
-| GitHub account | `ahammadshawki8` |
+| Project | `cassandra-507217`, number 987446871604 |
+| Bucket | `gs://cassandra-507217-workbooks` |
+| Topic | `cassandra-workbook-landed` |
+| Subscription | `cassandra-worker` |
+| Firestore | `(default)`, nam5, native |
+| Model | `gemini-3.5-flash`, Vertex AI, `location=global` |
 
-**Open risks**
-- `formulas` may not evaluate every Excel function. Mitigation: the demo workbook is authored by us, so it uses only well supported functions. Unevaluable formulas degrade to "unverified" rather than failing.
-- Cloud Run cold start during recording. Mitigation: min instances 1 while filming, 0 afterwards.
-- Gemini Enterprise Agent Platform services (Agent Registry, Memory Bank) are new with thin documentation. They are a stretch goal and must never be on the critical path.
+### Bugs found and fixed during the build
 
----
+Every one of these was real and would have shipped:
+
+1. **Regex backtracking** split `LOG10(` into column LOG row 1 followed by `0(`. Fixed with a digit lookahead.
+2. **Quoted sheet names** lost their quotes in R1C1 rewriting, so `'P L'!A1` became invalid.
+3. **Detectors read openpyxl's value cache**, which is empty for any workbook not written by Excel. Two of six planted defects were silently missed. They now read computed values from the oracle.
+4. **Phantom collateral rejections.** The calculation engine spells a blank cell differently from openpyxl, so None against empty counted as movement and rejected valid patches.
+5. **Blank out patches passed verification.** Pointing a formula at an empty cell satisfies both conditions, the value moved and nothing else did, which made emptying a cell the cheapest way to pass. Now rejected outright.
+6. **Invented references.** The Patcher occasionally named a cell just outside the used range. Formulas are now read before they are calculated and rejected on inspection.
+7. **Over aggressive upstream suppression.** Treating every finding inside a repaired cell's blast radius as a symptom discarded two genuine independent defects, including the sign inversion. Suppression now requires the finding to be purely semantic: if a structural detector read the cell's own formula and objected, no upstream repair explains it away.
+
+### Known limitations, stated honestly
+
+- Recalculation proves a repair is mechanically sound. It cannot prove the repair expresses what the author meant. Where the workbook no longer holds enough information to infer intent, the clearest case being a reference whose target was deleted, the repair is labelled `needs_human_intent` rather than presented as proven.
+- `formulas` does not implement every Excel function. Anything it cannot evaluate degrades to unverified and is never reported as proven.
+
+### Remaining
+
+- Cloud Run deploy and the Pub/Sub push subscription
+- README with spin up instructions and prior art
+- Architecture diagram
+- Demo video, recorded by teammate
 
 ## Working Rules
 
