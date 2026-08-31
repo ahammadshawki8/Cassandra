@@ -410,7 +410,7 @@ function esc(s) {
   return d.innerHTML;
 }
 
-fetch("/healthz").then(r => r.json()).then(h => {
+fetch("/api/health").then(r => r.json()).then(h => {
   $("engine").textContent = `${h.model} on ${h.vertex === "TRUE" ? "vertex ai" : "gemini api"} · ${h.store}`;
 }).catch(() => {});
 loadLatest();

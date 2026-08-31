@@ -499,7 +499,10 @@ class Auditor:
             if verdict.passed:
                 result.status = Status.REPAIRED
                 result.final_formula = proposal.formula
-                result.needs_human_intent = "broken reference" in result.defect_class
+                result.needs_human_intent = (
+                    "reference_integrity" in finding.detectors
+                    or "broken reference" in result.defect_class
+                )
                 result.value_after = verdict.observed
                 result.downstream_moved = [
                     {"cell": d.key, "before": d.before, "after": d.after}

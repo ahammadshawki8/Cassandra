@@ -126,8 +126,8 @@ def _regressions(previous: dict[str, Any], run: Any) -> list[str]:
     return lines
 
 
-@app.get("/healthz")
-def healthz() -> dict[str, Any]:
+@app.get("/api/health")
+def health() -> dict[str, Any]:
     return {
         "ok": True,
         "store": store.backend,
