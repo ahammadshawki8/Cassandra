@@ -305,6 +305,60 @@ function handle(ev) {
   $("prog").classList.remove("retry");
   $("step").textContent = STEPS[at];
   $("det").textContent = brief(ev);
+  live(ev);
+}
+
+/* Findings appear as they are settled rather than all at once at the end. The
+   authoritative render replaces all of this the moment the run is stored; this
+   exists so the pane is never a blank rectangle for two minutes. */
+const cards = new Map();
+
+function live(ev) {
+  if (!ev.cell) return;
+  if (ev.kind === "dismissed" || ev.kind === "resolved_upstream") {
+    $("asides").insertAdjacentHTML("beforeend",
+      `<span class="aside rise"><code>${esc(ev.cell)}</code> &middot; ${
+        ev.kind === "dismissed" ? "legitimate as written" : "resolved upstream"}</span>`);
+    show("asidesect");
+    return;
+  }
+
+  let card = cards.get(ev.cell);
+  if (!card) {
+    card = document.createElement("div");
+    card.className = "fix rise";
+    card.innerHTML = `<div class="fh"><span class="ref">${esc(ev.cell)}</span>
+        <span class="chip rev" data-chip>Examining</span></div>
+      <p data-why></p><div data-patch></div>`;
+    cards.set(ev.cell, card);
+    $("fixes").appendChild(card);
+    $("corrnote").textContent = "live";
+    show("corrsect");
+  }
+  const chip = card.querySelector("[data-chip]");
+  const why = card.querySelector("[data-why]");
+  const patch = card.querySelector("[data-patch]");
+
+  if (ev.kind === "confirmed") {
+    chip.textContent = ev.severity || "Confirmed";
+    why.textContent = (ev.message || "").split(": ").slice(1).join(": ");
+  } else if (ev.kind === "patching") {
+    chip.textContent = "Writing a fix";
+  } else if (ev.kind === "rejected") {
+    patch.innerHTML = `<div class="retried"><b>Attempt ${ev.attempt} rejected.</b> ${
+      esc((ev.message || "").split(": ").slice(1).join(": "))}</div>`;
+    chip.textContent = "Revising";
+  } else if (ev.kind === "verified") {
+    chip.textContent = "Verified";
+    chip.className = "chip ok";
+    if (ev.formula) {
+      patch.insertAdjacentHTML("beforeend",
+        `<div class="patch"><div class="add"><span class="op">+</span><code>${esc(ev.formula)}</code></div></div>`);
+    }
+  } else if (ev.kind === "quarantined") {
+    chip.textContent = "Needs a human";
+  }
+  $("main").scrollTop = $("main").scrollHeight;
 }
 
 function brief(ev) {
@@ -325,7 +379,7 @@ function writeLog(ev) {
 function startUI(name) {
   at = -1; setBusy(true);
   $("log").innerHTML = ""; $("verdict").innerHTML = "";
-  $("fixes").innerHTML = ""; $("asides").innerHTML = "";
+  $("fixes").innerHTML = ""; $("asides").innerHTML = ""; cards.clear();
   ["corrsect","asidesect","tracewrap"].forEach(i => $(i).classList.add("hidden"));
   $("empty").classList.add("hidden"); show("pane"); show("prog");
   $("prog").classList.remove("retry");
