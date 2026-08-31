@@ -23,6 +23,7 @@ import base64
 import json
 import os
 import queue
+import re
 import threading
 import time
 from typing import Any
@@ -294,7 +295,7 @@ def runs() -> JSONResponse:
     """
     rows = store.recent()
     for row in rows:
-        row["workbook"] = os.path.basename(row.get("workbook") or "")
+        row["workbook"] = _leaf(row.get("workbook"))
     return JSONResponse(json.loads(json.dumps(rows, default=_plain)))
 
 
@@ -341,6 +342,15 @@ def run_detail(run_id: str) -> JSONResponse:
         for r in (run.get("results") or [])
     ]
     return JSONResponse(json.loads(json.dumps(trimmed, default=_plain)))
+
+
+def _leaf(path: str | None) -> str:
+    """The file name from a path recorded on any platform.
+
+    os.path.basename only splits on the separator of the host it runs on, so a
+    Windows path stored by a local run comes back whole from a Linux container.
+    """
+    return re.split(r"[\\/]", path or "")[-1]
 
 
 def _plain(value: Any) -> Any:

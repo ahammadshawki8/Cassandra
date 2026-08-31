@@ -171,3 +171,26 @@ class TestCorrectedCopy:
         with pytest.raises(sources.SourceError) as e:
             sources.corrected_copy("no/such/file.xlsx", {"Model!B6": "=1"})
         assert "Run the audit again" in str(e.value)
+
+
+class TestPathLeaf:
+    """Run titles come from paths recorded on whichever machine ran the audit."""
+
+    def test_a_windows_path_is_reduced_on_a_linux_container(self):
+        from cassandra.service.app import _leaf
+
+        # os.path.basename only splits on the host separator, so this exact case
+        # once put an entire temporary path in the history rail.
+        assert _leaf(r"C:\Users\a\AppData\Local\Temp\cassandra\model.xlsx") == "model.xlsx"
+
+    def test_posix_and_bare_names(self):
+        from cassandra.service.app import _leaf
+
+        assert _leaf("/tmp/cassandra/model.xlsx") == "model.xlsx"
+        assert _leaf("demo/model.xlsx") == "model.xlsx"
+        assert _leaf("model.xlsx") == "model.xlsx"
+
+    def test_missing_path_is_empty_not_an_error(self):
+        from cassandra.service.app import _leaf
+
+        assert _leaf(None) == ""
