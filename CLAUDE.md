@@ -74,17 +74,29 @@ The Semantic Auditor is the only hunter that fundamentally requires a language m
 - **Institutional memory.** Findings dismissed by a human are remembered across runs and sessions, so the system never re raises settled matters.
 - **Cross workbook lineage.** Tracks when one model feeds another, so a break in an upstream model surfaces against every downstream consumer.
 
+### Ways in, and the artifact out
+
+| Source | How |
+| --- | --- |
+| Any workbook | Dropped on the page or chosen from a picker, `.xlsx` or `.xlsm` |
+| Google Sheets | A pasted link, exported through the endpoint Sheets already provides. No OAuth, so nobody grants an application access to their whole Drive to audit one file |
+| A bucket | An object landing in Cloud Storage, with no human involved at all |
+
+Out the other end is the **corrected workbook**, carrying every verified correction, with anything quarantined or awaiting a human deliberately left alone.
+
+A CSV is refused with the reason rather than accepted: it holds values and no formulas, and the defects Cassandra finds are defects in how a number was computed, which a CSV has already discarded.
+
 ### Operator surface
 
-Strictly linear, and deliberately small. The person looking at this has never seen the tool before.
+Three panes, none of them a dashboard of competing widgets.
 
-- **One control.** A single button. Nothing else is on screen at rest.
-- **One activity line.** What she is doing right now, in plain words, rather than a log firehose.
-- **One headline.** The figure that was wrong, struck through, beside the figure that is right.
-- **The fixes.** Formula before and after, the value that moved, and whether it was proven or needs a human.
+- **Left rail.** The ways in, and the history of past audits.
+- **Centre.** The headline figure, then the corrections, each with its diff and the value it moved.
+- **Right rail.** The reasoning chain, live, resizable between 260 and 620 pixels by drag or arrow key, with the width remembered.
+- **Findings stream in as they are settled** rather than appearing all at once, so the pane is never a blank rectangle for two minutes.
 - **A rejected patch is promoted, not buried.** When a repair fails verification and is retried, the interface says so in words. It is the clearest evidence the loop is real.
 
-Everything else, the full trace included, is collapsed behind one link. Design direction is kawaii in shape and palette, professional in typography: every formula and figure is set in a mono face, because a tool auditing financial models cannot read as a toy.
+Light and dark are both first class, remembered, and follow the operating system until overridden. Typography is Inter with a mono face for every formula and figure, because a tool auditing financial models cannot read as a toy.
 
 ---
 
@@ -99,33 +111,28 @@ Everything else, the full trace included, is collapsed behind one link. Design d
 
 ### User flow
 
-One column, three states. Nothing appears until it is relevant, and there are no orphan features.
+One deliberate action starts everything, and nothing appears until it has something to say.
 
 ```
-        ( mascot )
-        Cassandra
-   she checks the spreadsheet your numbers
-   come from, and proves every fix
-
-   +----------------------------+
-   |  [ Check this workbook ]   |   one button, the only control
-   +----------------------------+
-                |
-   +----------------------------+
-   | Writing a fix              |   one line, the current activity
-   | ......o                    |
-   +----------------------------+
-                |
-   +----------------------------+
-   | Operating Income           |
-   | 6,246,545 -> -1,704,250    |   the number that was wrong
-   |      off by 7,950,795      |
-   +----------------------------+
-                |
-   five fixes, each proven by recalculation
++---------------------------------------------------------------+
+| Cassandra   spreadsheet audit that proves its own corrections  |
++--------------+--------------------------------+---------------+
+| AUDIT        | Complete            7 / 7      | REASONING     |
+|              | 81 cells in 145 seconds        | CHAIN         |
+| [ drop an    |                                |               |
+|   .xlsx ]    | saas_projection_v11.xlsx       | 0.0s parsed   |
+|              | Operating Income / FY2027      | 0.7s baseline |
+|   or         |                                | 26s  semantic |
+|              | 6,246,545  ->  -1,704,250      |      mismatch |
+| [ Sheets   ] |                                | 99s  rejected |
+|   link       | Overstated by 7,950,795        | 110s proven   |
+|              |        [ Download corrected ]  | 144s combined |
+| RECENT       |                                |               |
+|  v11  5 of 8 | CORRECTIONS  5 proven          | resizable <-> |
++--------------+--------------------------------+---------------+
 ```
 
-The autonomous path needs no interface at all: a workbook landing in the bucket starts everything. The button exists so the whole thing can be shown without waiting on an upload.
+The autonomous path needs no interface at all: a workbook landing in the bucket starts everything, and the interface is only how a person watches. The rail exists so the whole thing can be shown without waiting on a bucket event.
 
 ### System diagram
 
@@ -333,9 +340,19 @@ Every one of these was real and would have shipped:
 6. **Invented references.** The Patcher occasionally named a cell just outside the used range. Formulas are now read before they are calculated and rejected on inspection.
 7. **Over aggressive upstream suppression.** Treating every finding inside a repaired cell's blast radius as a symptom discarded two genuine independent defects, including the sign inversion. Suppression now requires the finding to be purely semantic: if a structural detector read the cell's own formula and objected, no upstream repair explains it away.
 
-11. **Per repair figures did not match the corrected file.** Every correction is verified on its own against the original workbook, which is right for proving one repair and wrong for reporting a result: applied together they interact, and repairing the revenue range offsets the expense sign inversion. The interface said -2,481,455 while the downloadable file computed -1,704,250. The full set is now applied at once and recalculated a final time, so the number on screen is the number in the file.
+8. **A CSS specificity collision made dark mode unusable.** The rule colouring filled buttons against dark backgrounds also matched `.ghost` and `.run`, so the sample model button and every filename in the history rail rendered near black on near black. Exactly the collision the design guidance warns about, and invisible without looking at the rendered page.
 
-12. **A CSS specificity collision made dark mode unusable.** The rule colouring filled buttons against dark backgrounds also matched `.ghost` and `.run`, so the sample model button and every filename in the history rail rendered near black on near black. Exactly the collision the design guidance warns about, and invisible without looking at the rendered page.
+9. **Per repair figures did not match the corrected file.** Every correction is verified on its own against the original workbook, which is right for proving one repair and wrong for reporting a result: applied together they interact, and repairing the revenue range offsets the expense sign inversion. The interface said -2,481,455 while the downloadable file computed -1,704,250. The full set is now applied at once and recalculated a final time, so the number on screen is the number in the file.
+
+10. **A basename fix that did nothing.** `os.path.basename` splits only on the separator of the host it runs on, so a Windows path recorded by a local run came back whole from the Linux container. The fix left untouched the exact row that had prompted it. Now split on both separators, with tests.
+
+11. **`Content-Length` overruns, twice.** Values reaching Firestore as numpy scalars encode to a different byte length than the default encoder measures when setting the header, so the body overran it mid response. Fixed on the detail route, then found again on the list route, which had the same shape and had simply not been checked.
+
+### Cloud Run: CPU allocation is a correctness requirement here
+
+The Pub/Sub push is answered immediately and the audit runs on a worker thread, because holding the request open past the acknowledgement deadline would guarantee duplicate deliveries. By default Cloud Run throttles a container to nearly no CPU once it has finished responding, which makes that thread's progress best effort rather than guaranteed.
+
+Deploy with `--no-cpu-throttling`. Stated accurately: audits were observed completing without it, so this is not a repair for something demonstrably broken. It removes a real risk in exactly the case the design exists for, a file landing in the bucket with nobody watching, and turns best effort into deterministic.
 
 ### Known limitations, stated honestly
 
