@@ -240,7 +240,8 @@ def run_detail(run_id: str) -> JSONResponse:
             "needs_human_intent": r.get("needs_human_intent"),
             "attempts": [
                 {"attempt": a.get("attempt"), "passed": a.get("passed"),
-                 "reason": a.get("reason"), "formula": a.get("formula")}
+                 "reason": a.get("reason"), "formula": a.get("formula"),
+                 "latent": a.get("latent")}
                 for a in (r.get("attempts") or [])
             ],
         }

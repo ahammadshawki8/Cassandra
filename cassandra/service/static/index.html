@@ -6,339 +6,388 @@
 <title>Cassandra</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --milk:   #FBF7FF;
-    --card:   #FFFFFF;
-    --ink:    #33304A;
-    --soft:   #7B7694;
-    --faint:  #ACA6C4;
-    --edge:   #EDE7F8;
-    --iris:   #7B6CF6;
-    --iris-d: #5B4BD6;
-    --blush:  #FF8BA7;
-    --matcha: #4FC3A1;
-    --honey:  #FFC145;
+    --bg:        #FFFFFF;
+    --bg-sunk:   #FAFAFB;
+    --ink:       #1D1D1F;
+    --ink-2:     #515357;
+    --ink-3:     #86878B;
+    --rule:      #E6E6E9;
+    --rule-soft: #F0F0F2;
+    --accent:    #0064E0;
+    --wrong:     #C0362F;
+    --right:     #0F7B4F;
+    --right-bg:  #F0F8F4;
+    --wrong-bg:  #FCF3F2;
+    --warn:      #8A6212;
+    --warn-bg:   #FDF7EA;
 
-    --display: "Baloo 2", ui-rounded, system-ui, sans-serif;
-    --body: Nunito, ui-rounded, -apple-system, system-ui, sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-    --r: 20px;
-    --shadow: 0 2px 4px rgba(51,48,74,.04), 0 12px 28px -12px rgba(91,75,214,.16);
+    --gut: 32px;
+    --max: 680px;
   }
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
   body {
-    margin: 0; background: var(--milk); color: var(--ink);
-    font: 16px/1.6 var(--body);
-    display: flex; flex-direction: column; align-items: center;
-    padding: 40px 20px 80px;
-    background-image:
-      radial-gradient(circle at 12% 8%, rgba(123,108,246,.07), transparent 42%),
-      radial-gradient(circle at 88% 4%, rgba(255,139,167,.07), transparent 38%);
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 400 15px/1.6 var(--ui);
+    font-variant-numeric: tabular-nums;
   }
-  .wrap { width: 100%; max-width: 620px; }
+  .inner { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
 
-  /* ---------- header ---------- */
-  .hero { text-align: center; margin-bottom: 30px; }
-  .face { margin: 0 auto 12px; display: block; }
-  h1 {
-    font: 800 34px/1 var(--display); margin: 0 0 8px;
-    letter-spacing: -.01em; color: var(--ink);
+  /* ── top bar ───────────────────────────────── */
+  .bar {
+    border-bottom: 1px solid var(--rule);
+    position: sticky; top: 0; background: rgba(255,255,255,.88);
+    backdrop-filter: saturate(180%) blur(16px); z-index: 20;
   }
-  .promise { color: var(--soft); font-size: 16px; margin: 0 auto; max-width: 420px; }
-  .promise b { color: var(--iris-d); font-weight: 700; }
+  .bar .inner { display: flex; align-items: center; gap: 10px; height: 52px; }
+  .mark { display: flex; align-items: center; gap: 9px; }
+  .mark span { font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+  .status {
+    margin-left: auto; display: flex; align-items: center; gap: 7px;
+    font: 500 12px var(--ui); color: var(--ink-3);
+  }
+  .led { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+  .led.on { background: var(--right); }
 
-  /* ---------- shared card ---------- */
-  .card {
-    background: var(--card); border: 1px solid var(--edge);
-    border-radius: var(--r); box-shadow: var(--shadow);
-    padding: 22px; margin-bottom: 16px;
+  /* ── segments ──────────────────────────────── */
+  .seg { border-bottom: 1px solid var(--rule); padding: var(--gut) 0; }
+  .seg.sunk { background: var(--bg-sunk); }
+  .eyebrow {
+    font: 600 11px var(--ui); letter-spacing: .09em; text-transform: uppercase;
+    color: var(--ink-3); margin-bottom: 18px;
+    display: flex; align-items: baseline; gap: 10px;
   }
-  .card.tight { padding: 16px 20px; }
+  .eyebrow em { font-style: normal; color: var(--ink-3); font-weight: 400; letter-spacing: 0; text-transform: none; }
 
-  /* ---------- step 1, the only control ---------- */
-  .start { text-align: center; }
-  .filename {
-    font: 500 13px var(--mono); color: var(--soft);
-    background: var(--milk); border: 1px solid var(--edge);
-    border-radius: 10px; padding: 8px 14px; display: inline-block; margin-bottom: 18px;
+  /* ── opening statement ─────────────────────── */
+  .lede { padding: 64px 0 52px; }
+  .lede h1 {
+    font: 600 40px/1.12 var(--ui); letter-spacing: -.028em;
+    margin: 0 0 18px; max-width: 15ch;
   }
-  .filename span { color: var(--iris-d); }
+  .lede p {
+    font-size: 16px; color: var(--ink-2); margin: 0; max-width: 54ch;
+  }
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  /* ── the workbook + action ─────────────────── */
+  .file {
+    display: flex; align-items: center; gap: 16px;
+    border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px;
+    background: var(--bg);
+  }
+  .file .meta { flex: 1; min-width: 0; }
+  .file .name { font: 500 14px var(--mono); color: var(--ink); }
+  .file .sub { font-size: 13px; color: var(--ink-3); margin-top: 2px; }
   button {
-    font: 700 16px var(--body); color: #fff;
-    background: linear-gradient(180deg, var(--iris), var(--iris-d));
-    border: 0; border-radius: 14px; padding: 15px 34px; cursor: pointer;
-    box-shadow: 0 4px 0 rgba(91,75,214,.28); transition: transform .12s, box-shadow .12s;
+    font: 500 14px var(--ui); color: #fff; background: var(--accent);
+    border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer;
+    transition: background .15s, opacity .15s; white-space: nowrap;
   }
-  button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 0 rgba(91,75,214,.28); }
-  button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 rgba(91,75,214,.28); }
-  button:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
-  button:focus-visible { outline: 3px solid var(--blush); outline-offset: 3px; }
-  .hint { color: var(--faint); font-size: 13px; margin-top: 14px; }
+  button:hover:not(:disabled) { background: #0057C4; }
+  button:disabled { opacity: .38; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .note { font-size: 13px; color: var(--ink-3); margin-top: 12px; }
 
-  /* ---------- step 2, one activity line ---------- */
-  .now { display: flex; align-items: center; gap: 14px; }
-  .now .txt { flex: 1; min-width: 0; }
-  .now .phase { font: 700 16px var(--body); color: var(--ink); }
-  .now .detail {
-    font: 400 13px var(--mono); color: var(--soft); margin-top: 3px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* ── progress ──────────────────────────────── */
+  .prog .row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .prog .step { font: 600 16px var(--ui); letter-spacing: -.012em; }
+  .prog .count { margin-left: auto; font: 500 12px var(--mono); color: var(--ink-3); }
+  .prog .detail {
+    font: 400 13px var(--mono); color: var(--ink-3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 16px;
   }
-  .now.retry .phase { color: var(--honey); }
-  .beads { display: flex; gap: 6px; margin-top: 16px; }
-  .bead { height: 6px; flex: 1; border-radius: 99px; background: var(--edge); transition: background .4s; }
-  .bead.on { background: var(--iris); }
-  .bead.on.warn { background: var(--honey); }
+  .track { height: 2px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--accent); transition: width .5s cubic-bezier(.4,0,.2,1); }
+  .prog.retrying .step { color: var(--warn); }
+  .prog.retrying .fill { background: var(--warn); }
 
-  /* ---------- step 3, the headline ---------- */
-  .verdict { text-align: center; padding: 30px 22px; }
-  .verdict .label {
-    font: 700 12px var(--body); letter-spacing: .1em; text-transform: uppercase;
-    color: var(--soft); margin-bottom: 14px;
+  /* ── the result ────────────────────────────── */
+  .result .caption { font-size: 14px; color: var(--ink-2); margin-bottom: 6px; }
+  .result .subject {
+    font: 600 19px var(--ui); letter-spacing: -.015em; margin-bottom: 24px;
   }
-  .verdict .name { font: 700 17px var(--body); color: var(--ink); margin-bottom: 12px; }
-  .nums { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
-  .was {
-    font: 500 20px var(--mono); color: var(--faint);
-    text-decoration: line-through; text-decoration-color: var(--blush); text-decoration-thickness: 2px;
+  .figures { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .fig { display: flex; flex-direction: column; gap: 5px; }
+  .fig .tag {
+    font: 600 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
   }
-  .now-val { font: 700 30px var(--mono); color: var(--matcha); }
-  .off {
-    margin-top: 14px; display: inline-block;
-    font: 700 14px var(--mono); color: #B4453F;
-    background: #FFF0F3; border: 1px solid #FFD6E0; border-radius: 99px; padding: 7px 16px;
+  .fig .val { font: 500 26px var(--mono); letter-spacing: -.02em; }
+  .fig.bad .val { color: var(--wrong); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+  .fig.good .val { font-weight: 700; font-size: 34px; color: var(--right); }
+  .sep { color: var(--rule); font-size: 22px; align-self: center; }
+  .gap {
+    margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--rule-soft);
+    font-size: 14px; color: var(--ink-2);
   }
-  .clean .now-val { color: var(--matcha); }
+  .gap b { font: 700 14px var(--mono); color: var(--wrong); }
 
-  /* ---------- the fixes ---------- */
-  .sectionlead {
-    font: 700 13px var(--body); letter-spacing: .08em; text-transform: uppercase;
-    color: var(--soft); margin: 28px 0 12px; text-align: center;
+  /* ── corrections ───────────────────────────── */
+  .fix { padding: 22px 0; border-bottom: 1px solid var(--rule-soft); }
+  .fix:last-child { border-bottom: 0; padding-bottom: 0; }
+  .fix:first-of-type { padding-top: 0; }
+  .fixhead { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .ref { font: 500 14px var(--mono); }
+  .chip {
+    font: 600 10px var(--ui); letter-spacing: .07em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 4px;
   }
-  .fix { padding: 18px 20px; }
-  .fixtop { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-  .ref { font: 700 14px var(--mono); color: var(--ink); }
-  .tag {
-    font: 700 10px var(--body); letter-spacing: .06em; text-transform: uppercase;
-    padding: 4px 9px; border-radius: 99px;
+  .chip.verified { background: var(--right-bg); color: var(--right); }
+  .chip.review   { background: var(--warn-bg);  color: var(--warn); }
+  .fix p { margin: 0 0 14px; font-size: 14px; color: var(--ink-2); max-width: 60ch; }
+  .patch {
+    font: 400 12.5px/1.85 var(--mono);
+    border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;
   }
-  .tag.proven { background: #E4F8F1; color: #23795F; }
-  .tag.check  { background: #FFF6E0; color: #96660A; }
-  .tag.held   { background: #F2EFFB; color: #5B4BD6; }
-  .why { color: var(--soft); font-size: 14px; margin-bottom: 12px; }
-  .code { font: 500 12.5px/1.9 var(--mono); background: var(--milk); border-radius: 12px; padding: 10px 14px; }
-  .code div { display: flex; gap: 10px; }
-  .code .mark { width: 12px; flex: none; font-weight: 700; }
-  .code .out .mark, .code .out code { color: var(--blush); }
-  .code .in  .mark, .code .in  code { color: #23795F; }
-  .code code { overflow-wrap: anywhere; }
-  .moved { margin-top: 10px; font: 500 13px var(--mono); color: var(--soft); }
-  .moved b { color: var(--matcha); font-weight: 700; }
+  .patch div { display: flex; gap: 10px; padding: 5px 14px; }
+  .patch .del { background: var(--wrong-bg); color: var(--wrong); }
+  .patch .add { background: var(--right-bg); color: var(--right); }
+  .patch .op { flex: none; opacity: .65; }
+  .patch code { overflow-wrap: anywhere; }
+  .shift {
+    margin-top: 12px; font: 500 13px var(--mono); color: var(--ink-3);
+    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  }
+  .shift b { color: var(--right); font-weight: 700; }
+  .unchanged {
+    font: 400 12px var(--ui); color: var(--warn); background: var(--warn-bg);
+    padding: 3px 9px; border-radius: 4px;
+  }
+  .retried {
+    margin-top: 14px; padding: 11px 14px; border-radius: 8px;
+    background: var(--warn-bg); font-size: 13px; color: var(--warn); line-height: 1.55;
+  }
+  .retried b { font-weight: 600; }
 
-  .retryline {
-    margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--edge);
-    font-size: 13px; color: var(--soft);
+  .setaside { display: flex; flex-wrap: wrap; gap: 8px; }
+  .aside {
+    font: 400 12.5px var(--ui); color: var(--ink-3);
+    border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px;
   }
-  .retryline b { color: var(--honey); font-weight: 700; }
+  .aside code { font: 500 12px var(--mono); color: var(--ink-2); }
 
-  /* ---------- details, collapsed by default ---------- */
-  details { margin-top: 22px; }
-  summary {
-    cursor: pointer; color: var(--faint); font-size: 13px; text-align: center;
-    list-style: none; padding: 8px;
+  /* ── trace ─────────────────────────────────── */
+  details summary {
+    cursor: pointer; font-size: 13px; color: var(--accent); list-style: none; padding: 2px 0;
   }
-  summary::-webkit-details-marker { display: none; }
-  summary:hover { color: var(--iris-d); }
+  details summary::-webkit-details-marker { display: none; }
   .log {
-    font: 400 11.5px/1.8 var(--mono); color: var(--soft);
-    background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
-    padding: 14px 16px; max-height: 260px; overflow: auto; margin-top: 8px;
+    margin-top: 14px; font: 400 11.5px/1.85 var(--mono); color: var(--ink-3);
+    max-height: 280px; overflow: auto;
+    border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px;
   }
-  .log div { display: flex; gap: 10px; }
-  .log .tm { color: var(--faint); flex: none; width: 46px; text-align: right; }
-  .log .verified b { color: var(--matcha); }
-  .log .rejected b { color: var(--honey); }
+  .log div { display: flex; gap: 12px; }
+  .log .tm { flex: none; width: 44px; text-align: right; color: #ADAEB2; }
+  .log .verified span { color: var(--right); }
+  .log .rejected span { color: var(--warn); }
 
-  footer { text-align: center; color: var(--faint); font-size: 12px; margin-top: 34px; }
-  footer code { font: 500 11px var(--mono); color: var(--soft); }
+  footer { padding: 26px 0 60px; font-size: 12.5px; color: var(--ink-3); }
+  footer code { font: 400 12px var(--mono); }
 
   .hidden { display: none !important; }
-  .pop { animation: pop .45s cubic-bezier(.2,1.3,.5,1) both; }
-  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
-
-  #eyes { transform-origin: center; }
-  .scanning #eyes { animation: scan 1.5s ease-in-out infinite; }
-  @keyframes scan { 0%,100% { transform: translateX(-1.5px); } 50% { transform: translateX(1.5px); } }
-  .alert #cheekL, .alert #cheekR { opacity: .95; }
+  .reveal { animation: rise .4s cubic-bezier(.2,.7,.3,1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
     html { scroll-behavior: auto; }
   }
-  @media (max-width: 480px) {
-    h1 { font-size: 28px; }
-    .now-val { font-size: 25px; }
+  @media (max-width: 560px) {
+    .lede { padding: 44px 0 36px; }
+    .lede h1 { font-size: 31px; }
+    .fig.good .val { font-size: 28px; }
+    .file { flex-direction: column; align-items: stretch; gap: 14px; }
+    button { width: 100%; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <div class="hero">
-    <svg class="face" id="face" width="72" height="72" viewBox="0 0 72 72" role="img" aria-label="Cassandra">
-      <path d="M36 5 61 15v20c0 15-10.5 27-25 32C21.5 62 11 50 11 35V15z"
-            fill="#F2EFFB" stroke="#7B6CF6" stroke-width="3" stroke-linejoin="round"/>
-      <ellipse id="cheekL" cx="24" cy="41" rx="5" ry="3.4" fill="#FF8BA7" opacity=".45"/>
-      <ellipse id="cheekR" cx="48" cy="41" rx="5" ry="3.4" fill="#FF8BA7" opacity=".45"/>
-      <g id="eyes" fill="#33304A">
-        <circle cx="27.5" cy="33" r="3.4"/>
-        <circle cx="44.5" cy="33" r="3.4"/>
-      </g>
-      <path d="M31.5 43.5c1.4 1.7 3.5 1.7 5 0" stroke="#33304A" stroke-width="2.4"
-            stroke-linecap="round" fill="none"/>
-    </svg>
-    <h1>Cassandra</h1>
-    <p class="promise">
-      She checks the spreadsheet your numbers come from, fixes what is broken,
-      and <b>proves every fix by recalculating the file</b>.
+<div class="bar">
+  <div class="inner">
+    <span class="mark">
+      <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 1.6 17 4.4v6.1c0 4.2-2.9 7.6-7 8.9-4.1-1.3-7-4.7-7-8.9V4.4z"
+              stroke="#0064E0" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M7 10.1l2.1 2.1L13.2 8" stroke="#0064E0" stroke-width="1.7"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Cassandra</span>
+    </span>
+    <span class="status"><span class="led" id="led"></span><span id="conn">Connecting</span></span>
+  </div>
+</div>
+
+<section class="lede">
+  <div class="inner">
+    <h1>Your spreadsheet is wrong and you cannot see it.</h1>
+    <p>
+      94% of spreadsheets contain at least one error, and the people who wrote them
+      put the odds at one in ten. Cassandra reads the workbook, finds what is broken,
+      writes the correction, and <b>proves each one by recalculating the file</b>.
     </p>
   </div>
+</section>
 
-  <!-- step 1 -->
-  <div class="card start" id="start">
-    <div class="filename">saas_projection_<span>v11</span>.xlsx</div>
-    <div>
-      <button id="go">Check this workbook</button>
-    </div>
-    <p class="hint">Takes about two minutes. Nothing in your file is changed.</p>
-  </div>
-
-  <!-- step 2 -->
-  <div class="card hidden" id="working" aria-live="polite">
-    <div class="now" id="nowrow">
-      <div class="txt">
-        <div class="phase" id="phase">Waking up</div>
-        <div class="detail" id="detail">&nbsp;</div>
+<section class="seg sunk">
+  <div class="inner">
+    <div class="eyebrow">Workbook</div>
+    <div class="file">
+      <div class="meta">
+        <div class="name">saas_projection_v11.xlsx</div>
+        <div class="sub" id="filemeta">Three-year SaaS projection &middot; 3 sheets &middot; 26 formulas</div>
       </div>
+      <button id="go">Run audit</button>
     </div>
-    <div class="beads" id="beads"></div>
+    <p class="note">Roughly two minutes. Corrections are proposed, never written to your file.</p>
   </div>
+</section>
 
-  <!-- step 3 -->
-  <div class="card verdict hidden" id="verdict"></div>
-  <div id="fixes"></div>
+<section class="seg prog hidden" id="progress" aria-live="polite">
+  <div class="inner">
+    <div class="eyebrow">Analysis</div>
+    <div class="row">
+      <span class="step" id="step">Starting</span>
+      <span class="count" id="count">1 / 7</span>
+    </div>
+    <div class="detail" id="detail">&nbsp;</div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </div>
+</section>
 
-  <details id="more" class="hidden">
-    <summary>See everything she did</summary>
-    <div class="log" id="log"></div>
-  </details>
+<section class="seg result hidden" id="result">
+  <div class="inner" id="resultBody"></div>
+</section>
 
-  <footer>
-    <span id="engine">Gemini 3.5 Flash on Vertex AI</span><br>
-    <code id="conn">connecting</code>
-  </footer>
-</div>
+<section class="seg hidden" id="corrections">
+  <div class="inner">
+    <div class="eyebrow" id="corrhead">Corrections</div>
+    <div id="fixlist"></div>
+  </div>
+</section>
+
+<section class="seg hidden" id="dismissed">
+  <div class="inner">
+    <div class="eyebrow">Examined and left alone <em>not every difference is a defect</em></div>
+    <div class="setaside" id="asidelist"></div>
+  </div>
+</section>
+
+<section class="seg hidden" id="tracewrap" style="border-bottom:0">
+  <div class="inner">
+    <details>
+      <summary>Full reasoning chain</summary>
+      <div class="log" id="log"></div>
+    </details>
+  </div>
+</section>
+
+<footer>
+  <div class="inner">
+    <span id="engine">Gemini 3.5 Flash on Vertex AI</span> &middot;
+    <code>Google ADK &middot; Cloud Run &middot; Pub/Sub &middot; Firestore</code>
+  </div>
+</footer>
 
 <script>
 const $ = id => document.getElementById(id);
 
-/* The seven things she does, in order. The activity line names the current one. */
-const PHASES = [
-  { key: "read",   label: "Reading the workbook" },
-  { key: "calc",   label: "Calculating every cell" },
-  { key: "hunt",   label: "Looking for trouble" },
-  { key: "labels", label: "Reading the labels" },
-  { key: "judge",  label: "Deciding what actually matters" },
-  { key: "fix",    label: "Writing a fix" },
-  { key: "prove",  label: "Proving it by recalculating" },
+const STEPS = [
+  "Reading the workbook",
+  "Calculating every cell",
+  "Locating candidates",
+  "Checking labels against formulas",
+  "Judging what matters",
+  "Writing corrections",
+  "Proving them by recalculation",
 ];
-const PHASE_OF = {
+const STEP_OF = {
   start: 0, parsed: 0, mapped: 0, clustered: 0,
   baseline: 1, detected: 2, agent: 3, agent_finding: 3,
   confirmed: 4, dismissed: 4, resolved_upstream: 4,
-  patching: 5, rejected: 5, verified: 6, quarantined: 6, stored: 6, done: 6,
+  patching: 5, rejected: 5,
+  verified: 6, quarantined: 6, stored: 6, done: 6,
 };
 
-let at = -1, warned = false, RUN = null;
-
-$("beads").innerHTML = PHASES.map(() => `<div class="bead"></div>`).join("");
-const beads = [...document.querySelectorAll(".bead")];
-
-const fmt = v => typeof v === "number"
-  ? v.toLocaleString(undefined, { maximumFractionDigits: 0 })
-  : (v ?? "");
+let at = -1, RUN = null;
+const num = v => typeof v === "number" ? v.toLocaleString(undefined, { maximumFractionDigits: 0 }) : (v ?? "");
 
 const es = new EventSource("/events");
-es.onopen  = () => $("conn").textContent = "connected to the agent";
-es.onerror = () => $("conn").textContent = "reconnecting";
+es.onopen = () => { $("led").classList.add("on"); $("conn").textContent = "Agent connected"; };
+es.onerror = () => { $("led").classList.remove("on"); $("conn").textContent = "Reconnecting"; };
 es.onmessage = e => handle(JSON.parse(e.data));
 
 function handle(ev) {
-  logLine(ev);
+  writeLog(ev);
   if (ev.kind === "stored" && ev.run_id) return load(ev.run_id);
   if (ev.kind === "fatal") {
-    $("phase").textContent = "That did not work";
+    $("step").textContent = "The audit could not finish";
     $("detail").textContent = ev.message || "";
     $("go").disabled = false;
     return;
   }
+  const i = STEP_OF[ev.kind];
+  if (i === undefined) return;
 
-  const idx = PHASE_OF[ev.kind];
-  if (idx === undefined) return;
+  reveal("progress");
+  if (i > at) at = i;
+  $("fill").style.width = ((at + 1) / STEPS.length * 100) + "%";
+  $("count").textContent = `${at + 1} / ${STEPS.length}`;
 
-  show("working");
-  $("face").classList.add("scanning");
-
-  if (idx > at) { at = idx; }
-  beads.forEach((b, i) => b.classList.toggle("on", i <= at));
-
-  /* A rejected patch is the most important thing she does. Say so plainly. */
+  // A correction that failed verification is the most informative thing that
+  // happens in a run. It belongs in the headline, not the log.
   if (ev.kind === "rejected") {
-    warned = true;
-    $("nowrow").classList.add("retry");
-    $("face").classList.add("alert");
-    $("phase").textContent = "That fix did not hold up. Trying another.";
+    $("progress").classList.add("retrying");
+    $("step").textContent = "Correction rejected, revising";
     $("detail").textContent = ev.message || "";
-    beads[5].classList.add("warn");
     return;
   }
-  $("nowrow").classList.remove("retry");
-  $("face").classList.remove("alert");
-  $("phase").textContent = PHASES[at].label;
-  $("detail").textContent = shorten(ev);
+  $("progress").classList.remove("retrying");
+  $("step").textContent = STEPS[at];
+  $("detail").textContent = brief(ev);
 }
 
-function shorten(ev) {
+function brief(ev) {
   const m = ev.message || "";
-  if (ev.kind === "verified") return "proven: " + m.split(": ").slice(-1)[0];
+  if (ev.kind === "verified") return "Proven: " + m.split(": ").slice(-1)[0];
   if (ev.kind === "confirmed") return m.split(":")[0];
-  if (ev.kind === "dismissed") return "set aside " + m.split(" ")[0] + ", it is fine";
-  return m.length > 82 ? m.slice(0, 80) + "…" : m;
+  return m.length > 96 ? m.slice(0, 94) + "…" : m;
 }
 
-function logLine(ev) {
+function writeLog(ev) {
   const row = document.createElement("div");
   row.className = ev.kind || "";
-  row.innerHTML = `<span class="tm">${(ev.t ?? 0).toFixed(1)}s</span><b></b>`;
-  row.querySelector("b").textContent = ev.message || "";
+  row.innerHTML = `<span class="tm">${(ev.t ?? 0).toFixed(1)}s</span><span></span>`;
+  row.lastElementChild.textContent = ev.message || "";
   $("log").appendChild(row);
   $("log").scrollTop = $("log").scrollHeight;
 }
 
-function show(id) { $(id).classList.remove("hidden"); }
+function reveal(id) {
+  const el = $(id);
+  if (!el.classList.contains("hidden")) return;
+  el.classList.remove("hidden");
+  el.classList.add("reveal");
+}
 
 $("go").onclick = async () => {
   $("go").disabled = true;
-  at = -1; warned = false;
+  at = -1;
   $("log").innerHTML = "";
-  $("fixes").innerHTML = "";
-  $("verdict").classList.add("hidden");
-  $("more").classList.add("hidden");
-  beads.forEach(b => b.classList.remove("on", "warn"));
-  show("working");
+  $("fixlist").innerHTML = "";
+  $("asidelist").innerHTML = "";
+  ["result", "corrections", "dismissed", "tracewrap"].forEach(id => $(id).classList.add("hidden"));
+  $("progress").classList.remove("retrying");
+  $("fill").style.width = "0%";
+  reveal("progress");
+  $("step").textContent = "Starting";
+  $("detail").textContent = " ";
   try {
     await fetch("/api/audit", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -350,62 +399,86 @@ $("go").onclick = async () => {
 async function load(id) {
   RUN = await (await fetch("/api/runs/" + id)).json();
   if (RUN.error) return;
-  $("face").classList.remove("scanning", "alert");
-  beads.forEach(b => b.classList.add("on"));
-  $("phase").textContent = "Done";
-  $("detail").textContent = `${RUN.cell_count} cells checked in ${((RUN.finished_at - RUN.started_at) || 0).toFixed(0)} seconds`;
+  $("fill").style.width = "100%";
+  $("count").textContent = `${STEPS.length} / ${STEPS.length}`;
+  $("step").textContent = "Complete";
+  const secs = ((RUN.finished_at - RUN.started_at) || 0).toFixed(0);
+  $("detail").textContent = `${RUN.cell_count} cells across ${(RUN.sheets || []).length} sheets, examined in ${secs} seconds`;
   paint();
   $("go").disabled = false;
 }
 
 function paint() {
-  const fixed = (RUN.results || []).filter(r => r.status === "repaired");
+  const rs = RUN.results || [];
+  const fixed = rs.filter(r => r.status === "repaired");
+  const left = rs.filter(r => r.status === "dismissed" || r.status === "resolved_upstream");
   const h = RUN.headline || {};
 
-  const v = $("verdict");
-  v.classList.remove("hidden");
-  v.classList.add("pop");
-  if (!h.cell) {
-    v.innerHTML = `<div class="label">The verdict</div>
-      <div class="name">Nothing was wrong.</div>
-      <p class="why">Every figure in this workbook computes what its label says it does.</p>`;
-  } else {
+  if (h.cell) {
     const off = Math.abs((h.after ?? 0) - (h.before ?? 0));
-    v.innerHTML = `
-      <div class="label">The number you would have shown someone</div>
-      <div class="name">${esc(h.label || h.cell)}</div>
-      <div class="nums">
-        <span class="was">${fmt(h.before)}</span>
-        <span style="color:var(--faint)">&rarr;</span>
-        <span class="now-val">${fmt(h.after)}</span>
+    const overstated = (h.before ?? 0) > (h.after ?? 0);
+    $("resultBody").innerHTML = `
+      <div class="eyebrow">Result</div>
+      <div class="caption">The figure this workbook would have reported</div>
+      <div class="subject">${esc(h.label || h.cell)}</div>
+      <div class="figures">
+        <div class="fig bad"><span class="tag">Reported</span><span class="val">${num(h.before)}</span></div>
+        <span class="sep">&rarr;</span>
+        <div class="fig good"><span class="tag">Correct</span><span class="val">${num(h.after)}</span></div>
       </div>
-      <div class="off">off by ${fmt(off)}</div>`;
+      <div class="gap">${overstated ? "Overstated" : "Understated"} by <b>${num(off)}</b>,
+        traced to ${fixed.length} defect${fixed.length === 1 ? "" : "s"} in the formulas behind it.</div>`;
+  } else {
+    $("resultBody").innerHTML = `
+      <div class="eyebrow">Result</div>
+      <div class="subject">No figure in this workbook is wrong.</div>
+      <p style="color:var(--ink-2);margin:0">Every labelled cell computes what its label claims.</p>`;
   }
+  reveal("result");
 
   if (fixed.length) {
-    $("fixes").innerHTML =
-      `<div class="sectionlead">${fixed.length} fix${fixed.length === 1 ? "" : "es"}, each proven by recalculation</div>`
-      + fixed.map(card).join("");
+    $("corrhead").innerHTML = `Corrections <em>${fixed.length} proven by recalculation</em>`;
+    $("fixlist").innerHTML = fixed.map(fixRow).join("");
+    reveal("corrections");
   }
-  $("more").classList.remove("hidden");
+
+  if (left.length) {
+    $("asidelist").innerHTML = left.map(r =>
+      `<span class="aside"><code>${esc(r.cell)}</code> &middot; ${
+        r.status === "dismissed" ? "legitimate as written" : "resolved by an upstream correction"
+      }</span>`).join("");
+    reveal("dismissed");
+  }
+  reveal("tracewrap");
 }
 
-function card(r) {
-  const retries = (r.attempts || []).filter(a => !a.passed);
-  const tag = r.needs_human_intent
-    ? `<span class="tag check">worth a look</span>`
-    : `<span class="tag proven">proven</span>`;
-  return `<div class="card fix pop">
-    <div class="fixtop"><span class="ref">${esc(r.cell)}</span>${tag}</div>
-    <div class="why">${esc(r.explanation || r.summary || "")}</div>
-    <div class="code">
-      <div class="out"><span class="mark">-</span><code>${esc(r.original_formula)}</code></div>
-      <div class="in"><span class="mark">+</span><code>${esc(r.final_formula)}</code></div>
+function shiftRow(r) {
+  // A latent defect computes the correct value today. The figure not moving is
+  // the finding, not a failure, and saying so is the difference between the
+  // reader trusting this row and assuming it is broken.
+  const latent = (r.attempts || []).some(a => a.passed && a.latent);
+  const still = r.value_before === r.value_after;
+  if (latent || still) {
+    return `<div class="shift">${num(r.value_before)} <span style="color:var(--rule)">&rarr;</span> <b>${num(r.value_after)}</b>
+      <span class="unchanged">unchanged today &middot; diverges the moment the assumption moves</span></div>`;
+  }
+  return `<div class="shift">${num(r.value_before)} <span style="color:var(--rule)">&rarr;</span> <b>${num(r.value_after)}</b></div>`;
+}
+
+function fixRow(r) {
+  const failed = (r.attempts || []).filter(a => !a.passed);
+  const chip = r.needs_human_intent
+    ? `<span class="chip review">Confirm intent</span>`
+    : `<span class="chip verified">Verified</span>`;
+  return `<div class="fix">
+    <div class="fixhead"><span class="ref">${esc(r.cell)}</span>${chip}</div>
+    <p>${esc(r.explanation || r.summary || "")}</p>
+    <div class="patch">
+      <div class="del"><span class="op">&minus;</span><code>${esc(r.original_formula)}</code></div>
+      <div class="add"><span class="op">+</span><code>${esc(r.final_formula)}</code></div>
     </div>
-    <div class="moved">${fmt(r.value_before)} &rarr; <b>${fmt(r.value_after)}</b></div>
-    ${retries.length ? `<div class="retryline">
-      <b>Her first attempt failed.</b> ${esc(retries[0].reason)} She tried again.
-    </div>` : ""}
+    ${shiftRow(r)}
+    ${failed.length ? `<div class="retried"><b>First attempt rejected.</b> ${esc(failed[0].reason)} The agent revised and the next attempt passed.</div>` : ""}
   </div>`;
 }
 
@@ -415,12 +488,12 @@ function esc(s) {
   return d.innerHTML;
 }
 
+// A run id in the fragment opens that run directly, so a finished audit can be
+// linked to and reopened without running it again.
+if (location.hash.length > 1) load(location.hash.slice(1));
+
 fetch("/api/health").then(r => r.json()).then(h => {
   $("engine").textContent = `${h.model} on ${h.vertex === "TRUE" ? "Vertex AI" : "the Gemini API"}`;
-}).catch(() => {});
-
-fetch("/api/runs").then(r => r.json()).then(rows => {
-  if (rows && rows.length) load(rows[0].run_id);
 }).catch(() => {});
 </script>
 </body>
