@@ -19,6 +19,7 @@ which a model decides what happens next.
 from __future__ import annotations
 
 import json
+import os
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -282,7 +283,7 @@ class Auditor:
                 repaired_cells.add(result.cell)
 
         run.results.sort(key=lambda r: -r.materiality)
-        run.headline = self._headline(run, book, baseline)
+        run.headline = self._headline(run, book, baseline, path)
         run.finished_at = time.time()
         self._emit(
             run, "done",
@@ -549,19 +550,67 @@ class Auditor:
             radius, baseline, sheets,
         )
 
-    def _headline(self, run, book, baseline) -> dict[str, Any]:
-        """The single number a reader of this model would quote, and its fate."""
+    def _headline(self, run, book, baseline, path) -> dict[str, Any]:
+        """The single number a reader would quote, and what it becomes once fixed.
+
+        Every repair is verified on its own against the original workbook, which
+        is the right way to prove one correction but the wrong way to report the
+        result. Applied together the corrections interact: repairing a revenue
+        range raises revenue, which partly offsets an expense sign inversion
+        further down. Reporting one repair in isolation would put a number on
+        screen that the corrected workbook does not agree with.
+
+        So the whole set is applied at once and the workbook recalculated a
+        final time. The figure shown is the figure the downloaded file computes.
+        """
         repaired = [r for r in run.results if r.status is Status.REPAIRED]
+        if not repaired:
+            return {}
+
+        patches = {r.cell: r.final_formula for r in repaired if r.final_formula}
+        combined = None
+        try:
+            merged = oracle.apply_patch(path, patches)
+            try:
+                result = oracle.calculate(merged, run.sheets)
+                if "__workbook__" not in result.errors:
+                    combined = result
+            finally:
+                try:
+                    os.unlink(merged)
+                except OSError:
+                    pass
+        except Exception as exc:
+            self._emit(
+                run, "agent_error",
+                f"could not recalculate the fully corrected workbook: {exc}",
+            )
+
         moved: dict[str, dict[str, Any]] = {}
-        for result in repaired:
-            for delta in result.downstream_moved:
-                moved[delta["cell"]] = delta
-            if result.value_before is not None:
-                moved[result.cell] = {
-                    "cell": result.cell,
-                    "before": result.value_before,
-                    "after": result.value_after,
+        if combined is not None:
+            self._emit(
+                run, "combined",
+                f"all {len(patches)} corrections applied together and recalculated",
+            )
+            for delta in oracle.diff(baseline, combined):
+                moved[delta.key] = {
+                    "cell": delta.key, "before": delta.before, "after": delta.after,
                 }
+            # The reported figure must agree with the corrected file, so every
+            # repair carries the value it holds once the whole set is applied.
+            for r in repaired:
+                if r.cell in combined.values:
+                    r.value_after = combined.values[r.cell]
+        else:
+            for result in repaired:
+                for delta in result.downstream_moved:
+                    moved[delta["cell"]] = delta
+                if result.value_before is not None:
+                    moved[result.cell] = {
+                        "cell": result.cell,
+                        "before": result.value_before,
+                        "after": result.value_after,
+                    }
 
         def swing(entry: dict[str, Any]) -> float:
             before, after = entry.get("before"), entry.get("after")

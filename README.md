@@ -25,9 +25,21 @@ The Reinhart and Rogoff austerity paper shaped global fiscal policy off a summat
 
 ---
 
+## Three ways in, one artifact out
+
+| Source | How |
+| --- | --- |
+| **Any workbook** | Drop an `.xlsx` or `.xlsm` on the page, or pick one |
+| **Google Sheets** | Paste a link. No OAuth: sheets shared as *anyone with the link* export directly, so nobody grants an application access to their whole Drive to audit one file |
+| **A bucket** | An object landing in Cloud Storage starts an audit with no human involved at all |
+
+Out the other end is **the corrected workbook**, with every verified correction applied and everything quarantined or awaiting a human deliberately left alone. That is the difference between a report and a repair.
+
+A CSV is refused rather than accepted, with the reason: it holds values and no formulas, and the defects Cassandra finds are defects in how a number was computed, which a CSV has already discarded.
+
 ## What Cassandra does
 
-Drop a workbook into a Cloud Storage bucket. Cassandra wakes from zero, and:
+Drop a workbook in by any of the routes above. Cassandra wakes from zero, and:
 
 1. Parses it into a formula dependency graph
 2. Clusters cells into regions that should share one intent
@@ -38,6 +50,8 @@ Drop a workbook into a Cloud Storage bucket. Cassandra wakes from zero, and:
 7. **Applies the repair to a copy, recalculates the entire workbook, and rejects the repair unless the target moved exactly as predicted with no collateral movement**
 
 Rejected patches go back to the Patcher carrying the reason they failed. After three attempts the finding is quarantined for a human rather than guessed at.
+
+Each correction is proven on its own against the original workbook, which is the right way to prove one repair and the wrong way to report a result: applied together the corrections interact, and repairing a revenue range offsets an expense sign inversion further down. So the whole set is applied at once and the workbook recalculated a final time. **The figure on screen is the figure the downloaded file computes.**
 
 Drop the next revision of the same workbook and Cassandra becomes a regression sentinel, diffing it against the previous run and reporting what is newly broken.
 
