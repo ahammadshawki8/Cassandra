@@ -8,6 +8,13 @@ The audit runs on a worker thread and publishes events to an in process bus, so
 the push request returns immediately. Pub/Sub retries anything it does not get
 an acknowledgement for within its deadline, and an audit takes minutes, so
 holding the request open would guarantee duplicate deliveries.
+
+That design has a hard requirement on Cloud Run: the service must be deployed
+with CPU always allocated (`--no-cpu-throttling`). By default a container is
+throttled to nearly no CPU the moment it finishes responding, which freezes the
+worker thread immediately after the 204 and produces the least helpful failure
+available: the delivery succeeds, the endpoint answers correctly, and the audit
+silently never happens.
 """
 
 from __future__ import annotations
@@ -277,8 +284,18 @@ def corrected(run_id: str):
 
 
 @app.get("/api/runs")
-def runs() -> list[dict[str, Any]]:
-    return store.recent()
+def runs() -> JSONResponse:
+    """Recent runs, encoded in one pass.
+
+    Same reason as the detail route: headline figures arrive from Firestore as
+    numpy scalars, which encode to a different byte length than the default
+    encoder measures when it sets Content-Length, and the response then overruns
+    the header it already sent.
+    """
+    rows = store.recent()
+    for row in rows:
+        row["workbook"] = os.path.basename(row.get("workbook") or "")
+    return JSONResponse(json.loads(json.dumps(rows, default=_plain)))
 
 
 @app.get("/api/runs/{run_id}")
