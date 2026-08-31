@@ -35,6 +35,18 @@ run, so nothing has to be staged.
 
 > **SHOW:** `01-cold-open.png`, or cut to Excel with `saas_projection_v11.xlsx` open on the
 > PL sheet, cell C8 selected so the formula bar reads `=C6+C7`.
+>
+> **Required by the rules, do not skip:** the video must show the backend running on
+> Google Cloud. Four tabs cover it, all captured in the live segment at 1:58.
+> Open them before you start recording:
+>
+> 1. Cloud Run service page: shows the .run.app URL, region, revision, and Serving traffic
+> 2. Cloud Run LOGS tab, or Logs Explorer filtered to the cassandra service
+> 3. Cloud Storage browser on the workbooks bucket
+> 4. The Pub/Sub subscription, whose push endpoint reads .run.app/pubsub
+>
+> A fifth, free of charge: hit `/api/health` on the deployed URL for two seconds. It
+> returns the project, the model, Vertex, and Firestore in a single frame.
 
 "This company is reporting six point two million dollars of operating income."
 

@@ -147,7 +147,7 @@ See `docs/architecture.md`, which carries three mermaid diagrams: the whole syst
 | Compute | Cloud Run, scale to zero |
 | Eventing | Cloud Storage notifications, Pub/Sub |
 | State | Firestore |
-| Observability | OpenTelemetry, Cloud Trace |
+| Observability | Reasoning chain persisted with each run, plus Cloud Run request logs |
 | Calculation oracle | `formulas` (Python Excel interpreter) |
 | Graph | `networkx` |
 
@@ -227,7 +227,7 @@ The friction is quantified, historically catastrophic, and universal. Every judg
 - Strict least privilege tool scoping across agents, enforced in code
 - Externalized, resumable state with idempotency on redelivery
 - A bounded, failure tolerant self correction loop that directly answers the rubric's question about recovering from a hallucinating worker agent
-- Full OpenTelemetry reasoning chain traces
+- Every step of every run persisted as a reasoning chain, replayable months later from the record rather than only live
 
 ### Demo and Production Readiness (30%)
 
@@ -268,7 +268,7 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 - [x] Verifier with recalculation, predicted versus actual assertion, and rejection reasons
 - [x] Bounded retry and quarantine handling
 - [x] Firestore persistence for runs, findings, attempts, verdicts
-- [ ] OpenTelemetry instrumentation to Cloud Trace
+- [ ] OpenTelemetry spans exported to Cloud Trace. Not done: the reasoning chain is written into the run document instead, which is what the interface replays. `opentelemetry-sdk` is present only as an ADK dependency and nothing in this project creates a span.
 - [x] Idempotency on Pub/Sub message ID
 
 ### Phase 3 — Operator surface
@@ -446,7 +446,7 @@ On the demo model, a three year SaaS projection, it found five defects in 114 se
 
 ### Devpost: technologies
 
-Gemini 3.5 Flash through Vertex AI, Google ADK for the agent fleet, Cloud Run for scale to zero execution, Cloud Storage and Pub/Sub for event driven ingestion, Firestore for run state and delivery idempotency, and OpenTelemetry for reasoning chain traces. The calculation oracle is the `formulas` Excel interpreter; the dependency graph is `networkx`.
+Gemini 3.5 Flash through Vertex AI, Google ADK for the agent fleet, Cloud Run for scale to zero execution, Cloud Storage and Pub/Sub for event driven ingestion, Firestore for run state and delivery idempotency, and a reasoning chain persisted with each run so the audit trail survives the session. The calculation oracle is the `formulas` Excel interpreter; the dependency graph is `networkx`.
 
 ### Devpost: data sources
 
