@@ -18,6 +18,7 @@ never ran, and the dashboard still works for the session.
 from __future__ import annotations
 
 import json
+import re
 import os
 import threading
 import time
@@ -26,6 +27,29 @@ from typing import Any
 
 RUNS = "cassandra_runs"
 CLAIMS = "cassandra_deliveries"
+DISMISSALS = "cassandra_dismissals"
+
+# Revisions of one model rarely keep the same file name. These are the endings
+# people actually use, and stripping them is what lets v12 be recognised as the
+# next revision of v11 rather than an unrelated workbook.
+_REVISION = re.compile(
+    r"(?:[ _-]*(?:v|ver|version|rev|draft|final)[ _-]?\d*"
+    r"|[ _-]*\(\d+\)"
+    r"|[ _-]*copy"
+    r"|[ _-]*\d{4}[-_]?\d{2}[-_]?\d{2})+$",
+    re.I,
+)
+
+
+def lineage_key(path: str) -> str:
+    """The identity a workbook keeps across revisions.
+
+    saas_projection_v11.xlsx and saas_projection_v12.xlsx are the same model,
+    and a regression sentinel that cannot see that is only a defect detector.
+    """
+    name = re.split(r"[\\/]", path or "")[-1]
+    stem = os.path.splitext(name)[0]
+    return _REVISION.sub("", stem).strip(" _-").lower()
 
 
 class Store:
@@ -33,6 +57,7 @@ class Store:
         self.project = project or os.environ.get("GCP_PROJECT_ID")
         self._memory: dict[str, dict[str, Any]] = {}
         self._claims: set[str] = set()
+        self._dismissed: dict[str, set[str]] = {}
         self._lock = threading.Lock()
         self._db = None
         try:
@@ -125,11 +150,11 @@ class Store:
         ]
 
     def previous_for(self, workbook: str, exclude: str = "") -> dict[str, Any] | None:
-        """The most recent earlier run of the same workbook, for regression diffing."""
-        base = os.path.basename(workbook or "")
+        """The most recent earlier revision of the same model, for regression diffing."""
+        want = lineage_key(workbook)
         candidates = [
             r for r in self.recent(50)
-            if os.path.basename(r.get("workbook") or "") == base
+            if lineage_key(r.get("workbook") or "") == want
             and r.get("run_id") != exclude
         ]
         if not candidates:
@@ -151,22 +176,50 @@ class Store:
         except Exception:
             return removed
 
-    def dismissals(self) -> set[str]:
-        """Cells a human has already dismissed, so the system stops re raising them."""
-        if self._db is None:
-            return set()
-        try:
-            docs = self._db.collection("cassandra_dismissals").stream()
-            return {d.id.replace("__", "!") for d in docs}
-        except Exception:
-            return set()
+    # Dismissals are scoped to a model rather than global, because Revenue!B5
+    # being a legitimate series seed in one workbook says nothing about the cell
+    # of the same name in somebody else's.
+    def _dismissal_id(self, workbook: str, cell: str) -> str:
+        return f"{lineage_key(workbook)}::{cell}".replace("/", "_")
 
-    def dismiss(self, cell: str, reason: str = "") -> None:
+    def dismissals(self, workbook: str) -> set[str]:
+        """Cells a human settled on this model, so it stops raising them again."""
+        with self._lock:
+            local = set(self._dismissed.get(lineage_key(workbook), set()))
+        if self._db is None:
+            return local
+        try:
+            docs = (
+                self._db.collection(DISMISSALS)
+                .where("lineage", "==", lineage_key(workbook))
+                .stream()
+            )
+            return local | {d.to_dict().get("cell", "") for d in docs}
+        except Exception:
+            return local
+
+    def dismiss(self, workbook: str, cell: str, reason: str = "") -> None:
+        key = lineage_key(workbook)
+        with self._lock:
+            self._dismissed.setdefault(key, set()).add(cell)
         if self._db is None:
             return
         try:
-            self._db.collection("cassandra_dismissals").document(
-                cell.replace("!", "__")
-            ).set({"cell": cell, "reason": reason, "at": time.time()})
+            self._db.collection(DISMISSALS).document(
+                self._dismissal_id(workbook, cell)
+            ).set({"lineage": key, "cell": cell, "reason": reason, "at": time.time()})
+        except Exception:
+            pass
+
+    def undismiss(self, workbook: str, cell: str) -> None:
+        key = lineage_key(workbook)
+        with self._lock:
+            self._dismissed.get(key, set()).discard(cell)
+        if self._db is None:
+            return
+        try:
+            self._db.collection(DISMISSALS).document(
+                self._dismissal_id(workbook, cell)
+            ).delete()
         except Exception:
             pass

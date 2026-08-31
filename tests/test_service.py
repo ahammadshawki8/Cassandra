@@ -194,3 +194,85 @@ class TestPathLeaf:
         from cassandra.service.app import _leaf
 
         assert _leaf(None) == ""
+
+
+class TestLineage:
+    """A revision has to be recognised as the same model, or there is no sentinel."""
+
+    def test_version_suffixes_pair_up(self):
+        from cassandra.service.store import lineage_key as k
+
+        assert k("saas_projection_v11.xlsx") == k("saas_projection_v12.xlsx")
+        assert k("demo/plan_v3.xlsx") == k("/tmp/plan_v9.xlsx")
+
+    def test_the_endings_people_actually_use(self):
+        from cassandra.service.store import lineage_key as k
+
+        assert k("Board Model FINAL.xlsx") == "board model"
+        assert k("budget (3).xlsx") == "budget"
+        assert k("forecast copy.xlsx") == "forecast"
+        assert k("plan_2027-03-14.xlsx") == "plan"
+
+    def test_unrelated_models_stay_apart(self):
+        from cassandra.service.store import lineage_key as k
+
+        assert k("dept_budget.xlsx") != k("saas_projection_v11.xlsx")
+
+    def test_a_windows_path_reduces_like_any_other(self):
+        from cassandra.service.store import lineage_key as k
+
+        assert k(r"C:\Users\a\Temp\saas_projection_v11.xlsx") == "saas_projection"
+
+
+class TestSettledFindings:
+    """A finding a human settled must not come back on the next revision."""
+
+    def test_a_dismissal_is_scoped_to_the_model(self):
+        from cassandra.service.store import Store
+
+        store = Store.__new__(Store)
+        store._memory, store._claims, store._dismissed = {}, set(), {}
+        store._db = None
+        import threading
+
+        store._lock = threading.Lock()
+
+        store.dismiss("demo/saas_projection_v11.xlsx", "Revenue!B5")
+        # The same address in a different model is untouched.
+        assert "Revenue!B5" in store.dismissals("saas_projection_v12.xlsx")
+        assert "Revenue!B5" not in store.dismissals("dept_budget.xlsx")
+
+    def test_a_dismissal_can_be_undone(self):
+        from cassandra.service.store import Store
+        import threading
+
+        store = Store.__new__(Store)
+        store._memory, store._claims, store._dismissed = {}, set(), {}
+        store._db = None
+        store._lock = threading.Lock()
+
+        store.dismiss("model_v1.xlsx", "PL!C8")
+        assert store.dismissals("model_v2.xlsx") == {"PL!C8"}
+        store.undismiss("model_v2.xlsx", "PL!C8")
+        assert store.dismissals("model_v1.xlsx") == set()
+
+    def test_settled_cells_never_reach_the_agents(self, tmp_path):
+        """The point of settling: no model call is spent on it at all."""
+        import openpyxl
+        from cassandra.orchestrator import Auditor
+
+        path = tmp_path / "m.xlsx"
+        book = openpyxl.Workbook()
+        sheet = book.active
+        sheet.title = "Model"
+        for i, v in enumerate([10, 20, 30, 40], start=2):
+            sheet.cell(row=i, column=1, value=v)
+        sheet["A6"] = "Total"
+        sheet["B6"] = "=SUM(A2:A4)"
+        book.save(path)
+
+        # use_agents False keeps this deterministic; the filter runs before the
+        # agents either way.
+        run = Auditor(use_agents=False, dismissed={"Model!B6"}).audit(str(path))
+        assert "Model!B6" in run.settled
+        assert all(r.cell != "Model!B6" for r in run.results)

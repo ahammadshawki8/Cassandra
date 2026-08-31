@@ -129,6 +129,7 @@ class AuditRun:
     results: list[Result] = field(default_factory=list)
     trace: list[dict[str, Any]] = field(default_factory=list)
     headline: dict[str, Any] = field(default_factory=dict)
+    settled: list[str] = field(default_factory=list)
 
     def to_json(self) -> str:
         payload = asdict(self)
@@ -145,9 +146,17 @@ TraceSink = Callable[[dict[str, Any]], None]
 class Auditor:
     """Runs one workbook through the whole pipeline."""
 
-    def __init__(self, on_event: TraceSink | None = None, use_agents: bool = True):
+    def __init__(
+        self,
+        on_event: TraceSink | None = None,
+        use_agents: bool = True,
+        dismissed: set[str] | None = None,
+    ):
         self.on_event = on_event or (lambda _: None)
         self.use_agents = use_agents
+        # Cells a human has already settled on this model. Raising them again
+        # is how a tool teaches people to ignore it.
+        self.dismissed = dismissed or set()
         self._agents: dict[str, Any] = {}
 
     def _agent(self, name: str):
@@ -226,6 +235,21 @@ class Auditor:
         # Deduplicate: the semantic auditor and a structural detector routinely
         # describe the same cell from two angles. Keep the stronger signal.
         findings = self._merge(findings)
+
+        # Anything a human has already settled on this model is dropped before
+        # a single model call is spent on it. Re raising a settled finding is
+        # how a tool teaches people to stop reading it.
+        if self.dismissed:
+            settled = [f for f in findings if f.cell in self.dismissed]
+            findings = [f for f in findings if f.cell not in self.dismissed]
+            for finding in settled:
+                self._emit(
+                    run, "settled",
+                    f"{finding.cell} was dismissed on an earlier revision, not raised again",
+                    cell=finding.cell,
+                )
+            if settled:
+                run.settled = [f.cell for f in settled]
 
         # Handle root causes before their symptoms. A finding that sits in the
         # blast radius of another is very often not independently broken, it is

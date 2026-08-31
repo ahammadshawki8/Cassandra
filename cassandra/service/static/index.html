@@ -198,6 +198,20 @@
   .fix { padding: 15px 0; border-bottom: 1px solid var(--rule-2); }
   .fix:last-child { border-bottom: 0; }
   .fh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .settle {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+    font: 500 11.5px var(--ui); color: var(--ink-4); background: transparent;
+    border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; cursor: pointer;
+    opacity: 0; transition: opacity .12s, color .12s, border-color .12s;
+  }
+  .fix:hover .settle, .settle:focus-visible { opacity: 1; }
+  .settle:hover { color: var(--ink); border-color: var(--rule); }
+  .settle.done { opacity: 1; color: var(--right); border-color: var(--right); }
+  .settled-note {
+    display: flex; gap: 8px; align-items: flex-start; margin-top: 10px;
+    font-size: 12.5px; color: var(--ink-3); background: var(--sunk);
+    border-radius: 7px; padding: 9px 11px;
+  }
   .ref { font: 500 13px var(--mono); }
   .chip { display: inline-flex; align-items: center; gap: 4px; font: 600 9.5px var(--ui); letter-spacing: .07em; text-transform: uppercase; padding: 3px 7px; border-radius: 4px; }
   .chip.ok { background: var(--right-bg); color: var(--right); }
@@ -653,11 +667,32 @@ function paint() {
     $("fixes").innerHTML = fixed.map(fixRow).join("");
     show("corrsect");
   }
-  if (left.length) {
+  const settled = (RUN.settled || []).map(c =>
+    `<span class="aside">${ico("i-check", 11)}<code>${esc(c)}</code> settled earlier, not raised again</span>`);
+  if (left.length || settled.length) {
     $("asides").innerHTML = left.map(r => `<span class="aside">${ico("i-dot", 11)}<code>${esc(r.cell)}</code> ${
-      r.status === "dismissed" ? "legitimate as written" : "resolved upstream"}</span>`).join("");
+      r.status === "dismissed" ? "legitimate as written" : "resolved upstream"}</span>`).concat(settled).join("");
     show("asidesect");
   }
+
+  // Settling a finding is a judgement about this model, so it holds for every
+  // later revision of it rather than just this run.
+  document.querySelectorAll("[data-settle]").forEach(b => b.onclick = async () => {
+    const cell = b.dataset.settle;
+    b.disabled = true;
+    try {
+      await fetch(`/api/runs/${RUN.run_id}/dismiss/${encodeURIComponent(cell)}`, { method: "POST" });
+      b.classList.add("done");
+      b.innerHTML = ico("i-check", 12) + "Settled";
+      const card = b.closest(".fix");
+      if (!card.querySelector(".settled-note")) {
+        card.insertAdjacentHTML("beforeend",
+          `<div class="settled-note">${ico("i-check", 13)}<span>Cassandra will not raise ${esc(cell)} again on later revisions of this workbook.</span></div>`);
+      }
+    } catch {
+      b.disabled = false;
+    }
+  });
 }
 
 function shiftRow(r) {
@@ -670,10 +705,12 @@ function shiftRow(r) {
 
 function fixRow(r) {
   const failed = (r.attempts || []).filter(a => !a.passed);
-  return `<div class="fix">
+  return `<div class="fix" data-cell="${esc(r.cell)}">
     <div class="fh"><span class="ref">${esc(r.cell)}</span>
       <span class="chip ${r.needs_human_intent ? "rev" : "ok"}">${
-        ico(r.needs_human_intent ? "i-warn" : "i-check", 11)}${r.needs_human_intent ? "Confirm intent" : "Verified"}</span></div>
+        ico(r.needs_human_intent ? "i-warn" : "i-check", 11)}${r.needs_human_intent ? "Confirm intent" : "Verified"}</span>
+      <button class="settle" data-settle="${esc(r.cell)}"
+        title="Stop raising this on later revisions of this model">${ico("i-check", 12)}This is fine</button></div>
     <p>${esc(r.explanation || r.summary || "")}</p>
     <div class="patch">
       <div class="del"><span class="op">&minus;</span><code>${esc(r.original_formula)}</code></div>

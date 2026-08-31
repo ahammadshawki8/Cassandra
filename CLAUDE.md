@@ -20,7 +20,7 @@ Drop a workbook into a Cloud Storage bucket. Cassandra wakes from zero, parses t
 
 Nothing is reported to the user that the system has not first proven to itself.
 
-Drop the next version of the same workbook and Cassandra becomes a regression sentinel: it diffs v12 against v11, identifies which edit broke which downstream number, and remembers every finding a human already dismissed so it never nags twice.
+Drop the next revision of the same model and Cassandra becomes a regression sentinel: it pairs the revisions by lineage, reports what is newly broken since the last run, and never re raises a finding a human has already settled.
 
 ---
 
@@ -49,30 +49,30 @@ The consequences are historical record. The Reinhart and Rogoff austerity paper 
 
 - **Zero touch ingestion.** A workbook landing in a Cloud Storage bucket emits an event. No UI, no upload button, no OAuth consent screen. The agent wakes on its own.
 - **Deterministic cartography.** The workbook is parsed into a formula dependency DAG, contiguous regions are clustered, and each region gets an R1C1 normalized signature. This stage is pure code with no model calls, because a parser does this better than an LLM.
-- **Specialist hunting fleet.** Six agents with strictly scoped read only tools, running in parallel, each responsible for one defect class.
+- **Five deterministic detectors plus one agent.** The structural defect classes are found by plain Python. Only the semantic class, a formula that disagrees with its own label, requires a model.
+- **Three agents, holding no tools at all.** Semantic Auditor, Adjudicator, Patcher, consulted in that order. None can read a file, mutate a workbook, or reach the network.
 - **Materiality adjudication.** Findings are ranked by blast radius through the DAG multiplied by the magnitude of impact on identified output cells, so the top finding is the one that actually moves money.
 - **Patch synthesis.** A concrete cell level edit, not prose advice.
 - **Verification by recalculation.** The patch is applied to a copy and the workbook is recalculated. The verifier asserts the target cell moved as predicted and that no unintended cell moved beyond tolerance. Rejected patches return to the patcher with the specific failure reason. Retries are bounded, then the finding is quarantined.
 
 ### The defect hunters
 
-| Agent | Defect class |
-| --- | --- |
-| Hardcode Hunter | Literal constants buried inside formulas (the London Whale class) |
-| Range Auditor | Off by one range boundaries, omitted final rows, headers pulled into sums (the Reinhart and Rogoff class) |
-| Pattern Breaker | Cells deviating from their region's R1C1 signature |
-| Sign and Polarity | Cashflow and accounting sign inversions |
-| Reference Integrity | `#REF!`, dangling cross sheet references, stale external links |
-| Semantic Auditor | Reads the human label and checks the formula computes what the label claims |
+| Detector | Kind | Defect class |
+| --- | --- | --- |
+| Hardcode Hunter | deterministic | Literal constants buried inside formulas (the London Whale class) |
+| Range Auditor | deterministic | Off by one range boundaries, omitted final rows (the Reinhart and Rogoff class) |
+| Pattern Breaker | deterministic | Cells deviating from their region's R1C1 signature |
+| Sign and Polarity | deterministic | Cashflow and accounting sign inversions |
+| Reference Integrity | deterministic | `#REF!`, dangling cross sheet references, stale external links |
+| Semantic Auditor | Gemini 3.5 Flash | Reads the human label and checks the formula computes what the label claims |
 
-The Semantic Auditor is the only hunter that fundamentally requires a language model. No static analyzer can determine that the cell labeled "Net Margin" is computing gross.
+The Semantic Auditor is the only one that fundamentally requires a language model. No static analyzer can determine that the cell labelled "Net Margin" is computing gross.
 
 ### Regression sentinel
 
-- **Version diffing.** Given a newer revision of a known workbook, Cassandra identifies which edits occurred and which downstream outputs changed as a result.
-- **Root cause attribution.** Traces a moved output number back to the specific originating edit through the dependency graph.
-- **Institutional memory.** Findings dismissed by a human are remembered across runs and sessions, so the system never re raises settled matters.
-- **Cross workbook lineage.** Tracks when one model feeds another, so a break in an upstream model surfaces against every downstream consumer.
+- **Revision pairing.** A workbook is identified by a lineage key that survives the endings people actually use, so `saas_projection_v12.xlsx` is recognised as the next revision of `_v11`, and `Board Model FINAL`, `budget (3)` and `forecast copy` all pair with their originals.
+- **Newly broken reporting.** A finding present in this revision and absent from the previous run of the same model is reported as newly broken, with the explanation attached.
+- **Settled findings stay settled.** A finding a human marks as fine is recorded against the model's lineage and dropped from every later revision before a single model call is spent on it. Scoped per model, because `Revenue!B5` being a legitimate series seed here says nothing about the same address in someone else's workbook.
 
 ### Ways in, and the artifact out
 
@@ -204,10 +204,10 @@ Honesty here is a feature. Judges will search, and arriving at the prior art bef
 ### What Cassandra does that none of them do
 
 1. **It runs as infrastructure, not as a tool.** Nobody has to remember to invoke it. The audit is triggered by the file existing, which removes the human bottleneck that is the actual root cause.
-2. **It catches the regression, not just the defect.** No tool above answers "this model was correct last week, which edit broke it, and which downstream number moved." That is version aware root cause attribution across revisions.
+2. **It catches the regression, not just the defect.** No tool above answers "this was fine last week, what broke since." Revisions are paired by lineage and anything newly broken is reported as such.
 3. **It proves its own fixes.** Existing tools emit warnings for a human to adjudicate. Cassandra writes the patch and refuses to surface it until recalculation confirms it does exactly what was predicted and nothing more.
 4. **It ranks by money, not by rule violation.** Static analyzers list every violation equally. Cassandra sorts by blast radius through the dependency graph multiplied by impact on real output cells.
-5. **It remembers.** Dismissed findings stay dismissed across sessions and revisions. Institutional memory is what separates a tool people use once from a system people leave running.
+5. **It remembers what a human settled.** A finding marked as fine is recorded against the model's lineage and dropped from every later revision before a model call is spent on it. A tool that re raises settled matters teaches people to stop reading it.
 
 The honest summary: the detection layer stands on established research, and that is a strength. The **autonomous, continuous, self verifying, regression aware** composition does not exist as a product or a paper.
 
@@ -358,10 +358,26 @@ Deploy with `--no-cpu-throttling`. Stated accurately: audits were observed compl
 
 **A deploy kills an audit in flight.** The first attempt at this test was invalidated by redeploying while it ran, which replaces the serving revision and takes the worker thread with it. In process work is the right trade here, since the run is idempotent on redelivery and the alternative is a queue and a second service, but it is a real property: do not deploy during a demo.
 
+### Validated against workbooks it was not designed around
+
+The demo model was authored to contain exactly the defects the detectors look for, which makes it circular as evidence. Three further workbooks exist in `demo/` to answer what it cannot. Results are recorded as they came out, including the miss.
+
+**`clean_amortisation.xlsx`, 163 cells, 123 formulas, correct by construction.** The most important test: does it invent findings on a healthy file? It raised one candidate, `Loan!B9`, and the Adjudicator dismissed it as the legitimate seed of the schedule. **Nothing reported, no headline, zero false positives** in 35 seconds. A tool that cries wolf on a correct workbook is worse than no tool, and this is the evidence that it does not.
+
+**`dept_budget.xlsx`, a different shape entirely**, variance columns and subtotals rather than a projection, with two defects written to be plausible rather than convenient.
+
+- `Budget!D9`, a variance subtraction reversed against the rest of its column, was **found and repaired**: `=C9-B9` became `=B9-C9`. The two cells downstream of it were correctly suppressed as symptoms.
+- `Budget!C15`, a subtotal stopping one row short, was **detected but then dismissed**. The Adjudicator judged it "likely a subtotal specifically for the first group of items", which is a defensible reading of a cell labelled only "Total committed".
+
+So one of two on an unfamiliar shape. The miss is a precision choice rather than a detection failure: the deterministic detector did flag it at 0.45 confidence and the Adjudicator declined it, which is exactly the conservatism its instructions ask for. Raising it would have required certainty the workbook does not contain.
+
 ### Known limitations, stated honestly
 
 - Recalculation proves a repair is mechanically sound. It cannot prove the repair expresses what the author meant. Where the workbook no longer holds enough information to infer intent, the clearest case being a reference whose target was deleted, the repair is labelled `needs_human_intent` rather than presented as proven.
 - **Google Sheets import is covered by tests but not yet confirmed against a live sheet.** Creating one requires a Google account this build process does not have. The export URL, the auditability of what comes back, and every failure path are tested with the network call stubbed; a single link shared as anyone with the link would confirm the last mile.
+- **Recall is deliberately traded for precision.** On the unfamiliar budget workbook one of two planted defects was declined by the Adjudicator on an ambiguous label. That is the instructed behaviour, because a false alarm costs an analyst an hour and teaches them to ignore the tool, but it does mean a genuine defect can be talked out of. The deterministic detector's own confidence is preserved in the run record, so a stricter reading of the same evidence is available without changing the pipeline.
+- **One audit runs at a time per instance.** `_running` is a process level lock. Two people auditing at once on one instance get told the service is busy rather than queued.
+- **The deployed endpoint is unauthenticated.** Fine for judging, wrong for anything else: anyone with the URL can spend the project's Vertex quota.
 - `formulas` does not implement every Excel function. Anything it cannot evaluate degrades to unverified and is never reported as proven.
 
 ### Verified end to end, by test rather than by assumption

@@ -108,7 +108,9 @@ def _audit(path: str, source: str, label: str = "") -> None:
             "message": f"woken by {source}",
             "workbook": label or os.path.basename(path),
         })
-        run = Auditor(on_event=bus.publish).audit(path)
+        run = Auditor(
+            on_event=bus.publish, dismissed=store.dismissals(path)
+        ).audit(path)
         _sources[run.run_id] = path
 
         previous = store.previous_for(path, exclude=run.run_id)
@@ -317,7 +319,7 @@ def run_detail(run_id: str) -> JSONResponse:
         k: run.get(k)
         for k in (
             "run_id", "workbook", "started_at", "finished_at",
-            "sheets", "cell_count", "formula_count", "headline",
+            "sheets", "cell_count", "formula_count", "headline", "settled",
         )
     }
 
@@ -388,10 +390,28 @@ def forget(run_id: str) -> JSONResponse:
     return JSONResponse({"deleted": run_id, "existed": existed})
 
 
-@app.post("/api/dismiss/{cell}")
-def dismiss(cell: str) -> dict[str, Any]:
-    store.dismiss(cell)
-    return {"dismissed": cell}
+@app.post("/api/runs/{run_id}/dismiss/{cell}")
+def dismiss(run_id: str, cell: str) -> JSONResponse:
+    """Settle a finding, so later revisions of this model stop raising it.
+
+    Scoped to the model rather than global: Revenue!B5 being a legitimate
+    series seed here says nothing about the same address in someone else's
+    workbook.
+    """
+    run = store.get(run_id)
+    if not run:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    store.dismiss(run.get("workbook", ""), cell)
+    return JSONResponse({"dismissed": cell})
+
+
+@app.delete("/api/runs/{run_id}/dismiss/{cell}")
+def undismiss(run_id: str, cell: str) -> JSONResponse:
+    run = store.get(run_id)
+    if not run:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    store.undismiss(run.get("workbook", ""), cell)
+    return JSONResponse({"restored": cell})
 
 
 @app.get("/events")

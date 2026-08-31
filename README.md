@@ -260,7 +260,7 @@ Spreadsheet error detection is a mature field. Cassandra stands on it rather tha
 **What Cassandra adds:**
 
 1. **It runs as infrastructure, not as a tool.** The audit is triggered by the file existing. That removes the human bottleneck which is the actual root cause.
-2. **It catches the regression, not just the defect.** No tool above answers "this model was correct last week, which edit broke it, and which downstream number moved."
+2. **It catches the regression, not just the defect.** No tool above answers "this was fine last week, what broke since." Revisions are paired by a lineage key that survives the endings people actually use, so `v12` is recognised as the next revision of `v11`, and anything newly broken is reported as such.
 3. **It proves its own fixes.** Existing tools emit warnings for a human to adjudicate. Cassandra writes the patch and refuses to surface it until recalculation confirms it does exactly what was predicted and nothing more.
 4. **It ranks by consequence, not by rule violation.** Findings are sorted by blast radius through the dependency graph weighted toward terminal output figures.
 5. **It proves latent defects**, which have no wrong value today and are invisible to every static check.
@@ -268,6 +268,20 @@ Spreadsheet error detection is a mature field. Cassandra stands on it rather tha
 The detection layer stands on established research, and that is a strength. The autonomous, continuous, self verifying, regression aware composition does not exist as a product or a paper.
 
 ---
+
+## Validated against workbooks it was not designed around
+
+The demo model contains exactly the defects the detectors look for, which makes it circular as evidence. Three further workbooks in `demo/` answer what it cannot. Build them with `python -m cassandra.demo.build_fixtures`.
+
+| Workbook | Question it answers | Result |
+| --- | --- | --- |
+| `clean_amortisation.xlsx` | Does it invent findings on a correct file? | **Nothing reported.** 123 formulas, one candidate raised and dismissed as a legitimate series seed |
+| `dept_budget.xlsx` | Does it work on a shape it has never seen? | **One of two.** Found and repaired a reversed variance; declined a short subtotal as ambiguous |
+| `saas_projection_v12.xlsx` | Does the regression sentinel fire? | Pairs with `_v11` by lineage and reports what is newly broken |
+
+The most important of these is the first. A tool that cries wolf on a healthy workbook is worse than no tool, and on 123 correct formulas it stayed quiet.
+
+The second is the honest one. `Budget!C15`, a subtotal stopping one row short, was detected at 0.45 confidence and then dismissed by the Adjudicator as "likely a subtotal specifically for the first group of items" — a defensible reading of a cell labelled only "Total committed". That is the instructed conservatism working as designed, and it is also a real recall cost. Both directions are stated because only one of them is flattering.
 
 ## What it cannot do
 
