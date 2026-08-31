@@ -1,11 +1,13 @@
 # Third party assets
 
-## auditing.gif
+## The empty state illustration
 
-- **Source:** Wikimedia Commons, `Loading_2.gif`
-- **URL:** https://commons.wikimedia.org/wiki/File:Loading_2.gif
-- **Licence:** Public domain / CC0
-- **Modifications:** none, used as downloaded
-- **Why it is here:** the empty state needs to read as "waiting for a workbook"
-  rather than as a blank pane. The asset already carries a transparent
-  background, so it sits correctly on both the light and the dark theme.
+- **Source:** unDraw, *Spreadsheet* (`spreadsheet_uj8z`)
+- **URL:** https://cdn.undraw.co/illustration/spreadsheet_uj8z.svg
+- **Licence:** unDraw open licence. Free for commercial use, no attribution
+  required. Credited here anyway, because a repository should say where its
+  assets came from.
+- **Modifications:** inlined into `index.html`, the fixed pixel dimensions
+  removed so CSS controls the size, and the two source colours mapped to CSS
+  custom properties so the illustration follows the light and dark themes
+  rather than carrying unDraw's purple.
