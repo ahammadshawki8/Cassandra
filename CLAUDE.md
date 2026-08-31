@@ -335,7 +335,7 @@ Every one of these was real and would have shipped:
 
 11. **Per repair figures did not match the corrected file.** Every correction is verified on its own against the original workbook, which is right for proving one repair and wrong for reporting a result: applied together they interact, and repairing the revenue range offsets the expense sign inversion. The interface said -2,481,455 while the downloadable file computed -1,704,250. The full set is now applied at once and recalculated a final time, so the number on screen is the number in the file.
 
-12. **A CSS specificity collision made dark mode unusable.** The rule colouring filled buttons against dark backgrounds also matched  and , so the sample model button and every filename in the history rail rendered near black on near black. Exactly the collision the design guidance warns about, and invisible without looking at the rendered page.
+12. **A CSS specificity collision made dark mode unusable.** The rule colouring filled buttons against dark backgrounds also matched `.ghost` and `.run`, so the sample model button and every filename in the history rail rendered near black on near black. Exactly the collision the design guidance warns about, and invisible without looking at the rendered page.
 
 ### Known limitations, stated honestly
 
@@ -357,7 +357,7 @@ Every one of these was real and would have shipped:
 
 52 tests passing.
 
-**The check that mattered most:** downloading the corrected workbook, reparsing it, and recalculating from scratch produced , the same figure the interface reports. The number on screen is the number in the file.
+**The check that mattered most:** downloading the corrected workbook, reparsing it, and recalculating from scratch produced `Operating Income -1,704,250`, the same figure the interface reports. The number on screen is the number in the file.
 
 ### Deployed and proven in the cloud
 
