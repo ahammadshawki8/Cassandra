@@ -354,6 +354,10 @@ The Pub/Sub push is answered immediately and the audit runs on a worker thread, 
 
 Deploy with `--no-cpu-throttling`. Stated accurately: audits were observed completing without it, so this is not a repair for something demonstrably broken. It removes a real risk in exactly the case the design exists for, a file landing in the bucket with nobody watching, and turns best effort into deterministic.
 
+**Confirmed unattended, on the deployed service.** `fy28_plan.xlsx` dropped into the bucket at 01:52:44 with nothing else touched, no browser connected and no deploy in flight. Run `9a5887a773f6` landed at 01:54:38: 8 findings, 5 repaired, `Operating Income 6,246,545 -> -1,704,250`. 114 seconds, no human action after the file existed.
+
+**A deploy kills an audit in flight.** The first attempt at this test was invalidated by redeploying while it ran, which replaces the serving revision and takes the worker thread with it. In process work is the right trade here, since the run is idempotent on redelivery and the alternative is a queue and a second service, but it is a real property: do not deploy during a demo.
+
 ### Known limitations, stated honestly
 
 - Recalculation proves a repair is mechanically sound. It cannot prove the repair expresses what the author meant. Where the workbook no longer holds enough information to infer intent, the clearest case being a reference whose target was deleted, the repair is labelled `needs_human_intent` rather than presented as proven.
@@ -367,7 +371,7 @@ Deploy with `--no-cpu-throttling`. Stated accurately: audits were observed compl
 | Upload | multipart POST, then the audit run through the interface | 5 corrections, headline -1,704,250 |
 | Download | fetched from the browser, reparsed, recalculated from scratch | matches the interface exactly |
 | Google Sheets | 16 tests with only the call to Google stubbed | export URL, auditability, every error path |
-| Autonomous | object dropped in the bucket, no further human action | Pub/Sub to Cloud Run to a stored run |
+| Autonomous | file dropped in the bucket on the deployed service, unattended | run 9a5887a773f6, 5 repaired, 114 seconds |
 | Theme | clicked, then read data-theme and computed styles | light and dark, persisted |
 | Chain resize | synthetic pointer drags at three widths | 330 to 500, clamps at 620 and 260, persisted |
 | Rejections | CSV, renamed file, private sheet, .xls, empty, oversized | all refused with actionable text |
