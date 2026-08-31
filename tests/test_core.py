@@ -181,3 +181,78 @@ class TestVerifier:
         path, names, base, radius = context
         oracle.verify(path, "Model!B6", "=SUM(A2:A5)", 100.0, radius, base, names)
         assert oracle.calculate(path, names).get("Model!B6") == 60.0
+
+
+@pytest.fixture(scope="module")
+def latent_path(tmp_path_factory):
+    """A model where one cell hardcodes the rate its neighbours reference.
+
+    The hardcoded value equals the assumption, so the workbook computes the
+    correct answer today. It is wrong only in the future, which is what makes
+    this class of defect invisible to a static check.
+    """
+    path = tmp_path_factory.mktemp("latent") / "latent.xlsx"
+    book = openpyxl.Workbook()
+    sheet = book.active
+    sheet.title = "Model"
+    sheet["A1"] = "Growth rate"
+    sheet["B1"] = 0.18
+    sheet["A3"] = "Base"
+    sheet["B3"] = 1000
+    sheet["A4"] = "Healthy"
+    sheet["B4"] = "=B3*$B$1"
+    sheet["A5"] = "Decoupled"
+    sheet["B5"] = "=B3*0.18"
+    book.save(path)
+    return str(path)
+
+
+class TestLatentVerification:
+    """Defects with no wrong value today, proven by perturbing the driver."""
+
+    DRIVER = "Model!B1"
+
+    def test_the_defect_is_invisible_at_baseline(self, latent_path):
+        values = oracle.calculate(latent_path, ["Model"])
+        assert values.get("Model!B4") == values.get("Model!B5")
+
+    def test_accepts_a_repair_that_reconnects_the_driver(self, latent_path):
+        verdict = oracle.verify_latent(
+            latent_path, "Model!B5", "=B3*$B$1", self.DRIVER, 0.30,
+            sheet_names=["Model"],
+        )
+        assert verdict.passed
+        assert "latent defect" in verdict.reason
+
+    def test_rejects_a_repair_that_keeps_the_constant(self, latent_path):
+        """Rewriting the cell without reconnecting the driver repairs nothing."""
+        verdict = oracle.verify_latent(
+            latent_path, "Model!B5", "=B3*0.18", self.DRIVER, 0.30,
+            sheet_names=["Model"],
+        )
+        assert not verdict.passed
+        assert "does not reconnect" in verdict.reason
+
+    def test_rejects_a_repair_swapping_one_constant_for_another(self, latent_path):
+        """0.25 moves the value today, so it is caught as a visible change."""
+        verdict = oracle.verify_latent(
+            latent_path, "Model!B5", "=B3*0.25", self.DRIVER, 0.30,
+            sheet_names=["Model"],
+        )
+        assert not verdict.passed
+
+    def test_rejects_when_the_cell_is_already_healthy(self, latent_path):
+        verdict = oracle.verify_latent(
+            latent_path, "Model!B4", "=B3*$B$1", self.DRIVER, 0.30,
+            sheet_names=["Model"],
+        )
+        assert not verdict.passed
+
+    def test_a_visible_defect_is_routed_to_direct_verification(self, latent_path):
+        """A patch that moves the value today is not latent and must say so."""
+        verdict = oracle.verify_latent(
+            latent_path, "Model!B5", "=B3*$B$1*2", self.DRIVER, 0.30,
+            sheet_names=["Model"],
+        )
+        assert not verdict.passed
+        assert "not a latent defect" in verdict.reason

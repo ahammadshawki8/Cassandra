@@ -259,3 +259,104 @@ def verify(
             os.unlink(patched_path)
         except OSError:
             pass
+
+
+def verify_latent(
+    src: str,
+    target: str,
+    patch_formula: str,
+    driver: str,
+    perturbed_value: Any,
+    baseline: CalcResult | None = None,
+    sheet_names: list[str] | None = None,
+) -> Verdict:
+    """Prove a latent defect by perturbing the driver it should have referenced.
+
+    A hardcoded constant that happens to equal the assumption it replaced
+    produces the correct answer today, so no amount of recalculating the
+    workbook as it stands will reveal it. It is still a real defect: the cell
+    has been silently decoupled from its driver and will go stale the moment
+    somebody updates the assumption.
+
+    The proof is a differential counterfactual. Comparing the original workbook
+    against the patched one, twice:
+
+      as the workbook stands  the two must AGREE     (which is why it is latent)
+      with the driver moved   the two must DIVERGE   (which is why it is a defect)
+
+    Both conditions are required. Agreement today is what makes the defect
+    invisible to every static check and to the person who wrote it. Divergence
+    under perturbation is what proves the cell has been cut off from its driver.
+
+    Note that asking only whether the target moves when the driver moves is not
+    sound, because the target may still respond through an indirect path. Here
+    Revenue!D12 hardcodes the growth rate yet reaches it anyway via the customer
+    count, so it moves under perturbation while remaining thoroughly defective.
+    Comparing the two workbooks against each other isolates the hardcode itself.
+    """
+    base = baseline if baseline is not None else calculate(src, sheet_names)
+    if "__workbook__" in base.errors:
+        return Verdict(
+            False, f"baseline calculation failed: {base.errors['__workbook__']}", target
+        )
+
+    patched_now = apply_patch(src, {target: patch_formula})
+    original_moved = apply_patch(src, {driver: perturbed_value})
+    patched_moved = apply_patch(src, {driver: perturbed_value, target: patch_formula})
+
+    try:
+        results = {
+            "patched as it stands": calculate(patched_now, sheet_names),
+            "original with driver moved": calculate(original_moved, sheet_names),
+            "patched with driver moved": calculate(patched_moved, sheet_names),
+        }
+        for label, result in results.items():
+            if "__workbook__" in result.errors:
+                return Verdict(
+                    False,
+                    f"{label} failed to calculate: {result.errors['__workbook__']}",
+                    target,
+                )
+
+        today_original = base.get(target)
+        today_patched = results["patched as it stands"].get(target)
+        moved_original = results["original with driver moved"].get(target)
+        moved_patched = results["patched with driver moved"].get(target)
+
+        if not equal(today_original, today_patched):
+            return Verdict(
+                False,
+                f"this is not a latent defect: the patch changes {target} from "
+                f"{today_original} to {today_patched} today, so it must be "
+                f"verified directly rather than by counterfactual",
+                target,
+                observed=today_patched,
+            )
+
+        if equal(moved_original, moved_patched):
+            return Verdict(
+                False,
+                f"patch does not reconnect {target} to {driver}: with the driver "
+                f"moved to {perturbed_value}, patched and unpatched workbooks "
+                f"still agree at {moved_patched}",
+                target,
+                observed=moved_patched,
+            )
+
+        return Verdict(
+            True,
+            f"counterfactual proves a latent defect: {target} is identical at "
+            f"{today_original} today, but with {driver} moved to "
+            f"{perturbed_value} the unpatched workbook reports {moved_original} "
+            f"while the repaired one reports {moved_patched}",
+            target,
+            predicted=moved_patched,
+            observed=today_patched,
+            intended_deltas=[Delta(target, moved_original, moved_patched)],
+        )
+    finally:
+        for path in (patched_now, original_moved, patched_moved):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
