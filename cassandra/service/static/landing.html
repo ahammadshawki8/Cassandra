@@ -34,7 +34,12 @@
   body {
     margin: 0; background: var(--bg); color: var(--ink);
     font: 400 16px/1.6 var(--ui); font-variant-numeric: tabular-nums; overflow-x: hidden;
+    /* An I-beam over every heading reads as though the page were a form.
+       Text stays selectable; only the pointer changes. */
+    cursor: default;
   }
+  /* The figures and formulas people might copy keep the caret that invites it. */
+  .stepline, .numrow, .paper .t, .paper .w, .pill { cursor: text; }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
   svg { flex: none; }
   a { color: inherit; }
