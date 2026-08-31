@@ -198,9 +198,52 @@ Open http://localhost:8080 and press **Run audit**.
 
 ### Tests
 
+`pytest` is not a runtime dependency, so install it alongside the service requirements.
+
 ```bash
-pip install pytest && pytest -q
+pip install pytest
+pytest -q
 ```
+
+Expected output:
+
+```
+62 passed
+```
+
+No Google Cloud credentials, no network access and no model calls are needed. The one
+place the suite would otherwise reach the internet, the Google Sheets export, is stubbed,
+because a test that depends on somebody else's sheet staying shared is not a test.
+
+| File | Count | What it pins down |
+| --- | --- | --- |
+| `tests/test_core.py` | 36 | Reference parsing and R1C1 normalisation, the dependency graph and blast radius, region clustering, and every failure mode of the Verifier |
+| `tests/test_service.py` | 26 | Every way a workbook gets in, every refusal, the corrected copy, revision lineage, and settled findings |
+
+The Verifier tests are the ones worth reading. They assert that it **rejects** a correct
+patch carrying a hallucinated predicted value, a patch that changes nothing, a patch that
+produces an Excel error, and a patch that empties a cell which held a value. They also
+assert the original workbook is never mutated.
+
+### Reproducing the validation results
+
+The demo model contains exactly the defects the detectors look for, which makes it
+circular as evidence. Three further workbooks answer what it cannot.
+
+```bash
+python -m cassandra.demo.build_fixtures
+```
+
+That writes three files into `demo/`. Audit each one from the running app.
+
+| Workbook | What it tests | Expected result |
+| --- | --- | --- |
+| `clean_amortisation.xlsx` | Does it invent findings on a correct file? | **Nothing reported.** 123 formulas, one candidate raised and dismissed as a legitimate series seed |
+| `dept_budget.xlsx` | Does it work on a shape it has never seen? | Finds and repairs `Budget!D9`, a variance subtraction reversed against the rest of its column |
+| `saas_projection_v12.xlsx` | Does the regression sentinel fire? | Reports `Revenue!D6` as newly broken in this revision |
+
+The regression check needs two runs in order, because the sentinel only fires on a
+genuinely new revision: audit `saas_projection_v11.xlsx` first, then `saas_projection_v12.xlsx`.
 
 ### Deploying the full cloud pipeline
 
@@ -214,7 +257,7 @@ gcloud config set project $PROJECT
 gcloud services enable \
   aiplatform.googleapis.com run.googleapis.com storage.googleapis.com \
   pubsub.googleapis.com firestore.googleapis.com cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com cloudtrace.googleapis.com
+  artifactregistry.googleapis.com
 
 gcloud storage buckets create gs://$BUCKET --location=$REGION --uniform-bucket-level-access
 gcloud pubsub topics create cassandra-workbook-landed
@@ -224,7 +267,7 @@ gcloud storage buckets notifications create gs://$BUCKET \
   --topic=cassandra-workbook-landed --event-types=OBJECT_FINALIZE
 
 gcloud run deploy cassandra --source . --region $REGION --allow-unauthenticated \
-  --memory 2Gi --cpu 2 --timeout 900 --max-instances 3 \
+  --memory 2Gi --cpu 2 --timeout 900 --max-instances 3 --no-cpu-throttling \
   --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=$PROJECT,GOOGLE_CLOUD_LOCATION=global,CASSANDRA_MODEL=gemini-3.5-flash,GCP_PROJECT_ID=$PROJECT,CASSANDRA_BUCKET=$BUCKET"
 
 URL=$(gcloud run services describe cassandra --region $REGION --format='value(status.url)')
@@ -236,6 +279,14 @@ gcloud storage cp demo/saas_projection_v11.xlsx gs://$BUCKET/
 ```
 
 Open `$URL` and watch it wake.
+
+> **`--no-cpu-throttling` is not a tuning knob here.** The Pub/Sub push is answered
+> immediately and the audit runs on a worker thread, because holding the request open past
+> the acknowledgement deadline would guarantee duplicate deliveries. By default Cloud Run
+> throttles a container to nearly no CPU the moment it finishes responding, which makes
+> that thread's progress best effort rather than guaranteed. Without the flag a workbook
+> can land in the bucket, the delivery can succeed, the endpoint can answer correctly, and
+> the audit can quietly never happen.
 
 ### Cost
 
