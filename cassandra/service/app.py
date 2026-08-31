@@ -29,6 +29,7 @@ import time
 from typing import Any
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import (
     FileResponse, HTMLResponse, JSONResponse, StreamingResponse,
 )
@@ -42,6 +43,7 @@ WORKDIR = os.environ.get("CASSANDRA_WORKDIR", "/tmp/cassandra")
 BUCKET = os.environ.get("CASSANDRA_BUCKET", "")
 
 app = FastAPI(title="Cassandra", docs_url="/api/docs")
+app.mount("/img", StaticFiles(directory=os.path.join(HERE, "static", "img")), name="img")
 store = Store()
 
 
