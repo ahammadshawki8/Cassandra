@@ -320,6 +320,18 @@ def run_detail(run_id: str) -> JSONResponse:
             "sheets", "cell_count", "formula_count", "headline",
         )
     }
+
+    # The reasoning chain is part of the record, not a live convenience. Opening
+    # a finished run has to show what the agents did, or the audit trail only
+    # exists for whoever happened to be watching when it ran.
+    trimmed["trace"] = [
+        {
+            "t": e.get("t"), "kind": e.get("kind"), "message": e.get("message"),
+            "cell": e.get("cell"), "formula": e.get("formula"),
+            "attempt": e.get("attempt"), "severity": e.get("severity"),
+        }
+        for e in (run.get("trace") or [])
+    ]
     trimmed["results"] = [
         {
             "cell": r.get("cell"),
@@ -394,7 +406,18 @@ def events() -> StreamingResponse:
     )
 
 
-@app.get("/", response_class=HTMLResponse)
-def dashboard() -> str:
-    with open(os.path.join(HERE, "static", "index.html"), encoding="utf-8") as handle:
+def _page(name: str) -> str:
+    with open(os.path.join(HERE, "static", name), encoding="utf-8") as handle:
         return handle.read()
+
+
+@app.get("/", response_class=HTMLResponse)
+def landing() -> str:
+    """What the project is, for someone arriving with no context."""
+    return _page("landing.html")
+
+
+@app.get("/app", response_class=HTMLResponse)
+def console() -> str:
+    """The audit console."""
+    return _page("index.html")
