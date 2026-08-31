@@ -316,6 +316,11 @@ const cards = new Map();
 function live(ev) {
   if (!ev.cell) return;
   if (ev.kind === "dismissed" || ev.kind === "resolved_upstream") {
+    // A cell the semantic pass raised may be settled without a correction. Its
+    // placeholder must go, or it sits on "Examining" for the rest of the run.
+    const stale = cards.get(ev.cell);
+    if (stale) { stale.remove(); cards.delete(ev.cell); }
+    if (!cards.size) $("corrsect").classList.add("hidden");
     $("asides").insertAdjacentHTML("beforeend",
       `<span class="aside rise"><code>${esc(ev.cell)}</code> &middot; ${
         ev.kind === "dismissed" ? "legitimate as written" : "resolved upstream"}</span>`);
