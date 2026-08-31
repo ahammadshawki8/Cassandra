@@ -335,10 +335,29 @@ Every one of these was real and would have shipped:
 
 11. **Per repair figures did not match the corrected file.** Every correction is verified on its own against the original workbook, which is right for proving one repair and wrong for reporting a result: applied together they interact, and repairing the revenue range offsets the expense sign inversion. The interface said -2,481,455 while the downloadable file computed -1,704,250. The full set is now applied at once and recalculated a final time, so the number on screen is the number in the file.
 
+12. **A CSS specificity collision made dark mode unusable.** The rule colouring filled buttons against dark backgrounds also matched  and , so the sample model button and every filename in the history rail rendered near black on near black. Exactly the collision the design guidance warns about, and invisible without looking at the rendered page.
+
 ### Known limitations, stated honestly
 
 - Recalculation proves a repair is mechanically sound. It cannot prove the repair expresses what the author meant. Where the workbook no longer holds enough information to infer intent, the clearest case being a reference whose target was deleted, the repair is labelled `needs_human_intent` rather than presented as proven.
+- **Google Sheets import is covered by tests but not yet confirmed against a live sheet.** Creating one requires a Google account this build process does not have. The export URL, the auditability of what comes back, and every failure path are tested with the network call stubbed; a single link shared as anyone with the link would confirm the last mile.
 - `formulas` does not implement every Excel function. Anything it cannot evaluate degrades to unverified and is never reported as proven.
+
+### Verified end to end, by test rather than by assumption
+
+| Path | How it was checked | Outcome |
+| --- | --- | --- |
+| Upload | multipart POST, then the audit run through the interface | 5 corrections, headline -1,704,250 |
+| Download | fetched from the browser, reparsed, recalculated from scratch | matches the interface exactly |
+| Google Sheets | 16 tests with only the call to Google stubbed | export URL, auditability, every error path |
+| Autonomous | object dropped in the bucket, no further human action | Pub/Sub to Cloud Run to a stored run |
+| Theme | clicked, then read data-theme and computed styles | light and dark, persisted |
+| Chain resize | synthetic pointer drags at three widths | 330 to 500, clamps at 620 and 260, persisted |
+| Rejections | CSV, renamed file, private sheet, .xls, empty, oversized | all refused with actionable text |
+
+52 tests passing.
+
+**The check that mattered most:** downloading the corrected workbook, reparsing it, and recalculating from scratch produced , the same figure the interface reports. The number on screen is the number in the file.
 
 ### Deployed and proven in the cloud
 
