@@ -273,22 +273,22 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 
 ### Phase 0 — Foundation and Google Cloud proof
 
-- [ ] Resolve Python toolchain (3.11 venv, verify `formulas` and `google-adk` install)
-- [ ] Install and authenticate `gcloud` CLI
+- [x] Resolve Python toolchain (3.11 venv, verify `formulas` and `google-adk` install)
+- [x] Install and authenticate `gcloud` CLI
 - [ ] Create GCP project, enable billing, enable APIs (Vertex AI, Cloud Run, Storage, Pub/Sub, Firestore, Cloud Trace)
 - [ ] Create the ingestion bucket and Pub/Sub topic with the object finalize notification
 - [ ] Deploy a stub Cloud Run service and prove the end to end pipe with a dummy file
 - [ ] Author the demo workbook: a realistic multi sheet financial model with planted defects, one of which is designed so the first patch attempt fails verification
-- [ ] Repository scaffold, `.gitignore`, dependency manifest
+- [x] Repository scaffold, `.gitignore`, dependency manifest
 
 ### Phase 1 — Deterministic core
 
-- [ ] Workbook parser producing a cell level model
-- [ ] Formula dependency DAG construction
-- [ ] Region clustering and R1C1 signature normalization
-- [ ] Blast radius computation over the DAG
-- [ ] Recalculation harness wrapping the calculation oracle
-- [ ] Unit tests against the demo workbook with known defect locations
+- [x] Workbook parser producing a cell level model
+- [x] Formula dependency DAG construction
+- [x] Region clustering and R1C1 signature normalization
+- [x] Blast radius computation over the DAG
+- [x] Recalculation harness wrapping the calculation oracle
+- [x] Unit tests against the demo workbook with known defect locations
 
 ### Phase 2 — Agent fleet
 
@@ -346,8 +346,13 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 - `opentelemetry-sdk` 1.42.1 arrives as an ADK dependency, so the observability layer needs no extra install
 - This file, committed and pushed
 
+- Google Cloud CLI 582.0.0 installed at `C:\Users\Shawki\google-cloud-sdk`, bundled python build, no admin rights. Note for anyone reproducing this: the documented rapid channel URL returns 404, the working path is `/rapid/downloads/`.
+- **Phase 1 deterministic core complete.** `model`, `refs`, `parser`, `graph`, `oracle`.
+- **The verifier is proven end to end.** It accepts a correct patch and rejects all four failure modes: a hallucinated prediction, a no op patch, a patch producing an Excel error, and any patch causing collateral movement outside the target's blast radius. The source workbook is never mutated.
+- 30 tests passing via `pytest`
+
 **In progress**
-- Google Cloud CLI download and extraction to `C:\Users\Shawki\google-cloud-sdk` (bundled python build, no admin rights required)
+- Phase 2, the agent fleet
 
 **Blocked / needs the user**
 - `gcloud auth login` must be run by the user, it requires a browser
