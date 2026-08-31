@@ -20,10 +20,13 @@ import threading
 import time
 from typing import Any
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import (
+    FileResponse, HTMLResponse, JSONResponse, StreamingResponse,
+)
 
 from ..orchestrator import Auditor
+from . import sources
 from .store import Store
 
 HERE = os.path.dirname(__file__)
@@ -80,7 +83,10 @@ def _download(bucket: str, name: str) -> str:
     return local
 
 
-def _audit(path: str, source: str) -> None:
+_sources: dict[str, str] = {}
+
+
+def _audit(path: str, source: str, label: str = "") -> None:
     """Run one audit, publishing events as it goes, and persist the result."""
     if not _running.acquire(blocking=False):
         bus.publish({
@@ -89,8 +95,13 @@ def _audit(path: str, source: str) -> None:
         })
         return
     try:
-        bus.publish({"t": 0, "kind": "woken", "message": f"woken by {source}"})
+        bus.publish({
+            "t": 0, "kind": "woken",
+            "message": f"woken by {source}",
+            "workbook": label or os.path.basename(path),
+        })
         run = Auditor(on_event=bus.publish).audit(path)
+        _sources[run.run_id] = path
 
         previous = store.previous_for(path, exclude=run.run_id)
         if previous:
@@ -198,6 +209,71 @@ async def audit_local(request: Request) -> dict[str, Any]:
         return {"error": f"no such workbook: {path}"}
     threading.Thread(target=_audit, args=(path, path), daemon=True).start()
     return {"started": path}
+
+
+def _start(src: sources.Source) -> dict[str, Any]:
+    """Begin an audit of a workbook that is already on disk."""
+    if _running.locked():
+        return {"error": "An audit is already running. Wait for it to finish."}
+    threading.Thread(
+        target=_audit, args=(src.path, src.origin, src.name), daemon=True
+    ).start()
+    return {"started": src.name, "origin": src.origin}
+
+
+@app.post("/api/upload")
+async def upload(file: UploadFile = File(...)) -> JSONResponse:
+    """Audit a workbook uploaded from the page."""
+    try:
+        src = sources.from_upload(file.filename or "workbook.xlsx", await file.read())
+    except sources.SourceError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(_start(src))
+
+
+@app.post("/api/import")
+async def import_sheet(url: str = Form(...)) -> JSONResponse:
+    """Audit a Google Sheet from its link."""
+    try:
+        src = sources.from_google_sheet(url)
+    except sources.SourceError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    return JSONResponse(_start(src))
+
+
+@app.get("/api/runs/{run_id}/corrected")
+def corrected(run_id: str):
+    """Download the workbook with every verified correction applied.
+
+    This is the artifact that makes Cassandra a tool rather than a report. Only
+    corrections that passed recalculation are written; anything quarantined or
+    awaiting a human is deliberately left alone.
+    """
+    run = store.get(run_id)
+    if not run:
+        return JSONResponse({"error": "not found"}, status_code=404)
+
+    patches = {
+        r["cell"]: r["final_formula"]
+        for r in (run.get("results") or [])
+        if r.get("status") == "repaired" and r.get("final_formula")
+    }
+    if not patches:
+        return JSONResponse({"error": "This run produced no verified corrections."}, status_code=400)
+
+    source_path = _sources.get(run_id) or run.get("workbook", "")
+    try:
+        out = sources.corrected_copy(source_path, patches)
+    except sources.SourceError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=410)
+    except Exception as exc:
+        return JSONResponse({"error": f"Could not build the file: {exc}"}, status_code=500)
+
+    return FileResponse(
+        out,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=os.path.basename(out),
+    )
 
 
 @app.get("/api/runs")
