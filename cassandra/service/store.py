@@ -136,6 +136,21 @@ class Store:
             return None
         return self.get(candidates[0]["run_id"])
 
+    def delete(self, run_id: str) -> bool:
+        """Forget a run entirely, so it stops appearing in the history."""
+        removed = False
+        with self._lock:
+            if run_id in self._memory:
+                del self._memory[run_id]
+                removed = True
+        if self._db is None:
+            return removed
+        try:
+            self._db.collection(RUNS).document(run_id).delete()
+            return True
+        except Exception:
+            return removed
+
     def dismissals(self) -> set[str]:
         """Cells a human has already dismissed, so the system stops re raising them."""
         if self._db is None:

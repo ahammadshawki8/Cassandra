@@ -376,6 +376,18 @@ def _plain(value: Any) -> Any:
     return str(value)
 
 
+@app.delete("/api/runs/{run_id}")
+def forget(run_id: str) -> JSONResponse:
+    """Remove a run from the history.
+
+    The corrected workbook for that run goes with it, since it is rebuilt from
+    the record rather than kept on disk.
+    """
+    existed = store.delete(run_id)
+    _sources.pop(run_id, None)
+    return JSONResponse({"deleted": run_id, "existed": existed})
+
+
 @app.post("/api/dismiss/{cell}")
 def dismiss(cell: str) -> dict[str, Any]:
     store.dismiss(cell)

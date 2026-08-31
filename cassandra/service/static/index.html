@@ -124,11 +124,19 @@
   .hint { font-size: 11.5px; color: var(--ink-4); line-height: 1.45; }
 
   .runs { display: flex; flex-direction: column; gap: 1px; }
-  .run { display: flex; gap: 8px; align-items: flex-start; text-align: left; width: 100%; background: transparent; color: var(--ink); border: 0; border-radius: 7px; padding: 7px 9px; cursor: pointer; font: inherit; }
-  .run:hover { background: var(--hover); }
-  .run.on { background: var(--sel); }
+  .runrow { display: flex; align-items: stretch; border-radius: 7px; }
+  .runrow:hover { background: var(--hover); }
+  .runrow.on { background: var(--sel); }
+  .forget {
+    flex: none; width: 28px; display: grid; place-items: center; padding: 0;
+    background: transparent; border: 0; border-radius: 6px; color: var(--ink-4);
+    cursor: pointer; opacity: 0; transition: opacity .12s, color .12s, background .12s;
+  }
+  .runrow:hover .forget, .forget:focus-visible { opacity: 1; }
+  .forget:hover { color: var(--wrong); background: var(--wrong-bg); }
+  .run { display: flex; gap: 8px; align-items: flex-start; text-align: left; flex: 1; min-width: 0; background: transparent; color: var(--ink); border: 0; border-radius: 7px; padding: 7px 9px; cursor: pointer; font: inherit; }
   .run svg { margin-top: 2px; color: var(--ink-4); }
-  .run.on svg { color: var(--accent); }
+  .runrow.on .run svg { color: var(--accent); }
   .run .meta { min-width: 0; }
   .run .n { color: var(--ink); font: 500 12px var(--mono); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .run .d { font-size: 11px; color: var(--ink-3); }
@@ -237,6 +245,7 @@
   <g id="i-moon"><path d="M16 11.6A6.6 6.6 0 0 1 8.4 4a6.9 6.9 0 1 0 7.6 7.6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></g>
   <g id="i-search"><circle cx="8.8" cy="8.8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m12.7 12.7 3.8 3.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></g>
   <g id="i-dot"><circle cx="10" cy="10" r="2.4" fill="currentColor"/></g>
+  <g id="i-trash"><path d="M4.6 6.2h10.8M8.1 6.2V4.6a1 1 0 0 1 1-1h1.8a1 1 0 0 1 1 1v1.6M6 6.2l.7 9a1 1 0 0 0 1 .95h4.6a1 1 0 0 0 1-.95l.7-9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></g>
   <g id="i-grid"><rect x="2.8" y="2.8" width="14.4" height="14.4" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M2.8 7.6h14.4M2.8 12.4h14.4M7.6 2.8v14.4M12.4 2.8v14.4" stroke="currentColor" stroke-width="1.1" opacity=".8"/></g>
   <g id="i-spinner"><circle cx="10" cy="10" r="6.6" fill="none" stroke="currentColor" stroke-width="1.8" opacity=".22"/><path d="M10 3.4a6.6 6.6 0 0 1 6.6 6.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></g>
 </defs></svg>
@@ -677,14 +686,47 @@ async function listRuns() {
   if (!rows || !rows.length) return;
   $("runs").innerHTML = rows.slice(0, 14).map(r => {
     const name = (r.workbook || "").split(/[\\/]/).pop();
-    return `<button class="run ${RUN && RUN.run_id === r.run_id ? "on" : ""}" data-id="${r.run_id}">
-      ${ico("i-grid", 13)}<span class="meta"><span class="n">${esc(name)}</span>
-      <span class="d">${r.repaired ? `<b>${r.repaired} fixed</b> of ` : ""}${r.findings} found</span></span></button>`;
+    return `<div class="runrow ${RUN && RUN.run_id === r.run_id ? "on" : ""}" data-id="${r.run_id}">
+      <button class="run" data-open>${ico("i-grid", 13)}<span class="meta">
+        <span class="n">${esc(name)}</span>
+        <span class="d">${r.repaired ? `<b>${r.repaired} fixed</b> of ` : ""}${r.findings} found</span>
+      </span></button>
+      <button class="forget" data-forget title="Remove ${esc(name)} from this list"
+        aria-label="Remove ${esc(name)} from this list">${ico("i-trash", 14)}</button>
+    </div>`;
   }).join("");
-  document.querySelectorAll(".run").forEach(b => b.onclick = () => {
+
+  document.querySelectorAll("[data-open]").forEach(b => b.onclick = () => {
     if (busy) return;
     $("prog").classList.add("hidden");
-    loadRun(b.dataset.id, true);
+    loadRun(b.closest(".runrow").dataset.id, true);
+  });
+
+  document.querySelectorAll("[data-forget]").forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const row = b.closest(".runrow"), id = row.dataset.id;
+    row.style.opacity = ".4";
+    try {
+      await fetch("/api/runs/" + id, { method: "DELETE" });
+    } catch {
+      row.style.opacity = "";
+      return;
+    }
+    // If the run on screen is the one just forgotten, clear the pane with it
+    // rather than leaving a result whose record no longer exists.
+    if (RUN && RUN.run_id === id) {
+      RUN = null;
+      $("verdict").innerHTML = ""; $("fixes").innerHTML = ""; $("asides").innerHTML = "";
+      ["corrsect", "asidesect", "prog", "pane"].forEach(i => $(i).classList.add("hidden"));
+      $("empty").classList.remove("hidden");
+      $("log").innerHTML = `<p class="chainempty">Every step the agents take appears here as it happens.</p>`;
+      $("evn").textContent = "";
+      evs = 0;
+    }
+    row.remove();
+    if (!document.querySelectorAll(".runrow").length) {
+      $("runs").innerHTML = `<p class="hint">Nothing yet.</p>`;
+    }
   });
 }
 

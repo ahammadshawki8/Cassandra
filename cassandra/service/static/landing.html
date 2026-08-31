@@ -13,9 +13,9 @@
     --bg:#FFFFFF; --panel:#FAFAFB; --sunk:#F4F4F6;
     --ink:#1D1D1F; --ink-2:#515357; --ink-3:#86878B; --ink-4:#ADAEB2;
     --rule:#E6E6E9; --rule-2:#F0F0F2;
-    --accent:#0064E0; --accent-d:#0052BD; --accent-soft:#F2F7FF;
+    --accent:#0064E0; --accent-d:#0052BD; --accent-soft:#EFF5FF;
     --wrong:#C0362F; --wrong-bg:#FCF3F2;
-    --right:#0F7B4F; --right-bg:#F0F8F4;
+    --right:#0F7B4F; --right-bg:#EDF7F2;
     --warn:#8A6212; --warn-bg:#FDF7EA;
     --ui: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -24,7 +24,7 @@
     --bg:#0E1116; --panel:#131721; --sunk:#171C27;
     --ink:#E9EDF3; --ink-2:#B4BBC7; --ink-3:#7E8798; --ink-4:#5C6474;
     --rule:#232937; --rule-2:#1C2130;
-    --accent:#4D9BFF; --accent-d:#6BAEFF; --accent-soft:#131E2E;
+    --accent:#4D9BFF; --accent-d:#6BAEFF; --accent-soft:#141F31;
     --wrong:#FF7B72; --wrong-bg:#2A1618;
     --right:#4FD08A; --right-bg:#0F2318;
     --warn:#E3B341; --warn-bg:#2A2113;
@@ -33,29 +33,28 @@
   html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font: 400 16px/1.6 var(--ui); font-variant-numeric: tabular-nums;
-    overflow-x: hidden;
+    font: 400 16px/1.6 var(--ui); font-variant-numeric: tabular-nums; overflow-x: hidden;
   }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
-  .narrow { max-width: 760px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
   svg { flex: none; }
   a { color: inherit; }
 
   /* ── nav ───────────────────────────────────── */
   nav {
-    position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 86%, transparent);
-    backdrop-filter: saturate(180%) blur(14px); border-bottom: 1px solid transparent;
-    transition: border-color .2s;
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid transparent; transition: border-color .2s;
   }
   nav.stuck { border-bottom-color: var(--rule); }
   nav .wrap { display: flex; align-items: center; gap: 14px; height: 60px; }
-  .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: -.01em; }
-  .navlinks { margin-left: auto; display: flex; align-items: center; gap: 4px; }
-  .navlinks a {
-    font-size: 13.5px; color: var(--ink-3); text-decoration: none;
-    padding: 7px 11px; border-radius: 7px;
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: -.01em; text-decoration: none; }
+  .brand svg { color: var(--accent); }
+  .navlinks { margin-left: auto; display: flex; align-items: center; gap: 3px; }
+  .navlinks a:not(.cta) {
+    font-size: 13.5px; color: var(--ink-3); text-decoration: none; padding: 7px 11px; border-radius: 7px;
   }
-  .navlinks a:hover { color: var(--ink); background: var(--sunk); }
+  .navlinks a:not(.cta):hover { color: var(--ink); background: var(--sunk); }
   .iconbtn {
     display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
     background: transparent; border: 0; border-radius: 8px; color: var(--ink-2); cursor: pointer;
@@ -68,142 +67,214 @@
   }
   :root[data-theme="dark"] .cta:not(.ghost) { color: #06121F; }
   .cta:hover { background: var(--accent-d); transform: translateY(-1px); }
-  .cta.big { font-size: 16.5px; padding: 15px 28px; border-radius: 11px; }
+  .cta.big { font-size: 16.5px; padding: 15px 26px; border-radius: 11px; }
   .cta.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
   :root[data-theme="dark"] .cta.ghost { color: var(--ink); }
   .cta.ghost:hover { background: var(--sunk); }
 
   /* ── hero ──────────────────────────────────── */
-  header { padding: 78px 0 64px; position: relative; overflow: hidden; }
+  header { padding: 64px 0 40px; position: relative; }
   header::before {
-    content: ""; position: absolute; inset: -40% 30% auto -20%; height: 520px;
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 12%, transparent), transparent);
-    pointer-events: none;
+    content: ""; position: absolute; inset: -30% 40% auto -25%; height: 560px;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 13%, transparent), transparent);
+    pointer-events: none; z-index: -1;
   }
+  .herogrid { display: grid; grid-template-columns: 1.02fr .98fr; gap: 46px; align-items: center; }
   .eyebrow {
     display: inline-flex; align-items: center; gap: 7px; font: 600 11.5px var(--ui);
     letter-spacing: .07em; text-transform: uppercase; color: var(--accent);
-    background: var(--accent-soft); border-radius: 99px; padding: 6px 13px; margin-bottom: 22px;
+    background: var(--accent-soft); border-radius: 99px; padding: 6px 13px; margin-bottom: 20px;
   }
-  h1 {
-    font: 700 clamp(34px, 5.6vw, 60px)/1.06 var(--ui); letter-spacing: -.035em;
-    margin: 0 0 20px; max-width: 17ch;
-  }
+  h1 { font: 700 clamp(33px, 4.4vw, 52px)/1.07 var(--ui); letter-spacing: -.035em; margin: 0 0 18px; }
   h1 .strike { color: var(--wrong); position: relative; white-space: nowrap; }
   h1 .strike::after {
-    content: ""; position: absolute; left: -2px; right: -2px; top: 55%; height: 4px;
+    content: ""; position: absolute; left: -2px; right: -2px; top: 54%; height: 4px;
     background: var(--wrong); border-radius: 2px; transform: scaleX(0); transform-origin: left;
-    animation: strike .7s cubic-bezier(.2,.8,.3,1) 1.1s forwards;
+    animation: strike .7s cubic-bezier(.2,.8,.3,1) 1s forwards;
   }
   @keyframes strike { to { transform: scaleX(1); } }
-  .sub { font-size: clamp(16px, 1.9vw, 19px); color: var(--ink-2); max-width: 56ch; margin: 0 0 32px; }
+  .sub { font-size: 17.5px; color: var(--ink-2); margin: 0 0 28px; }
   .sub b { color: var(--ink); font-weight: 600; }
-  .herobtns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-  .runline { font: 400 13px var(--mono); color: var(--ink-4); margin-top: 26px; }
+  .herobtns { display: flex; gap: 11px; flex-wrap: wrap; }
+  .runline { font: 400 12.5px var(--mono); color: var(--ink-4); margin-top: 22px; }
   .runline b { color: var(--right); font-weight: 600; }
 
-  /* animated proof card */
-  .proof {
-    margin-top: 46px; border: 1px solid var(--rule); border-radius: 14px; overflow: hidden;
-    background: var(--bg); box-shadow: 0 24px 60px -34px color-mix(in srgb, var(--accent) 40%, transparent);
-  }
+  /* live proof card */
+  .proof { border: 1px solid var(--rule); border-radius: 14px; overflow: hidden; background: var(--bg);
+    box-shadow: 0 28px 64px -36px color-mix(in srgb, var(--accent) 46%, transparent); }
   .proof .head {
-    display: flex; align-items: center; gap: 8px; padding: 11px 16px;
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
     border-bottom: 1px solid var(--rule); background: var(--panel);
-    font: 500 12px var(--mono); color: var(--ink-3);
+    font: 500 11.5px var(--mono); color: var(--ink-3);
   }
-  .dots { display: flex; gap: 5px; margin-right: 4px; }
-  .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule); display: block; }
-  .proof .body { padding: 22px 20px; display: grid; gap: 16px; }
-  .stepline { display: flex; align-items: center; gap: 10px; font: 400 13px var(--mono); color: var(--ink-3); opacity: 0; }
-  .stepline.in { animation: fadeUp .45s ease forwards; }
+  .dots { display: flex; gap: 5px; margin-right: 3px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); display: block; }
+  .proof .body { padding: 16px; display: grid; gap: 11px; }
+  .stepline {
+    display: flex; align-items: flex-start; gap: 9px; font: 400 12px/1.5 var(--mono);
+    color: var(--ink-3); opacity: 0;
+  }
+  .stepline.in { animation: fadeUp .4s ease forwards; }
   .stepline.rej { color: var(--warn); }
   .stepline.ok { color: var(--right); }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  .numrow { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--rule-2); }
-  .numrow .tag { font: 600 9.5px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 4px; }
-  .numrow .was { font: 500 22px var(--mono); color: var(--wrong); text-decoration: line-through; }
-  .numrow .now { font: 700 30px var(--mono); color: var(--right); }
-  .numrow .arrow { color: var(--ink-4); font-size: 19px; padding-bottom: 4px; }
+  .numrow { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--rule-2); }
+  .numrow .tag { font: 600 9px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 3px; }
+  .numrow .was { font: 500 19px var(--mono); color: var(--wrong); text-decoration: line-through; }
+  .numrow .now { font: 700 26px var(--mono); color: var(--right); }
 
   /* ── sections ──────────────────────────────── */
-  section { padding: 84px 0; border-top: 1px solid var(--rule); }
+  section { padding: 82px 0; border-top: 1px solid var(--rule); }
   section.sunk { background: var(--panel); }
-  .kicker {
-    font: 600 11.5px var(--ui); letter-spacing: .1em; text-transform: uppercase;
-    color: var(--accent); margin-bottom: 14px;
-  }
-  h2 { font: 700 clamp(26px, 3.6vw, 38px)/1.15 var(--ui); letter-spacing: -.028em; margin: 0 0 16px; max-width: 20ch; }
-  .lead { font-size: 17px; color: var(--ink-2); max-width: 60ch; margin: 0 0 44px; }
+  .kicker { display: flex; align-items: center; gap: 7px; font: 600 11.5px var(--ui);
+    letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 13px; }
+  h2 { font: 700 clamp(25px, 3.3vw, 36px)/1.16 var(--ui); letter-spacing: -.028em; margin: 0 0 14px; max-width: 21ch; }
+  .lead { font-size: 16.5px; color: var(--ink-2); max-width: 58ch; margin: 0 0 40px; }
 
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 22px; }
-  .stat { border-left: 2px solid var(--wrong); padding-left: 18px; }
-  .stat .n { font: 700 42px/1 var(--ui); letter-spacing: -.03em; color: var(--wrong); }
-  .stat .t { color: var(--ink-2); font-size: 14.5px; margin-top: 9px; }
-  .stat .src { color: var(--ink-4); font-size: 12px; margin-top: 6px; }
-
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(292px, 1fr)); gap: 18px; }
-  .card {
-    border: 1px solid var(--rule); border-radius: 13px; padding: 22px; background: var(--bg);
-    transition: transform .2s, border-color .2s;
+  /* research bars */
+  .bars { display: grid; gap: 20px; }
+  .bar { display: grid; grid-template-columns: 74px 1fr; gap: 18px; align-items: center; }
+  .bar .pct { font: 700 30px/1 var(--ui); letter-spacing: -.03em; color: var(--wrong); text-align: right; }
+  .bar .track { height: 42px; background: var(--sunk); border-radius: 8px; overflow: hidden; position: relative; }
+  .bar .fill {
+    height: 100%; width: 0; border-radius: 8px; transition: width 1.3s cubic-bezier(.2,.8,.25,1);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--wrong) 78%, transparent), var(--wrong));
   }
+  .bar.on .fill { width: var(--w); }
+  .bar .cap { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 15px;
+    font-size: 14px; color: var(--ink); font-weight: 500; }
+  .bar .src { grid-column: 2; font-size: 12.5px; color: var(--ink-4); margin-top: -8px; }
+  .gapnote {
+    margin-top: 34px; display: flex; gap: 13px; align-items: flex-start;
+    border-left: 2px solid var(--accent); padding: 4px 0 4px 16px; color: var(--ink-2); max-width: 66ch;
+  }
+
+  /* pipeline */
+  .pipe { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .node {
+    border: 1px solid var(--rule); border-radius: 12px; padding: 16px 14px; background: var(--bg);
+    position: relative; transition: transform .2s, border-color .2s, box-shadow .2s;
+  }
+  .node:hover { transform: translateY(-3px); box-shadow: 0 12px 28px -18px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .node .n { font: 700 10px var(--mono); color: var(--ink-4); }
+  .node .ic { color: var(--accent); margin: 9px 0 8px; display: block; }
+  .node h3 { font: 600 14.5px var(--ui); margin: 0 0 5px; letter-spacing: -.01em; }
+  .node p { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+  .node.rej { border-color: var(--warn); background: var(--warn-bg); }
+  .node.rej .ic, .node.rej .n { color: var(--warn); }
+  .node.ok { border-color: var(--right); background: var(--right-bg); }
+  .node.ok .ic, .node.ok .n { color: var(--right); }
+  .node::after {
+    content: ""; position: absolute; right: -8px; top: 50%; width: 6px; height: 6px;
+    border-top: 1.5px solid var(--rule); border-right: 1.5px solid var(--rule);
+    transform: translateY(-50%) rotate(45deg);
+  }
+  .node:last-child::after { display: none; }
+
+  /* architecture, hand built so it stays legible at any width */
+  .arch { display: grid; gap: 12px; }
+  .lane {
+    border: 1px solid var(--rule); border-radius: 13px; padding: 15px; background: var(--bg);
+  }
+  .lane.det { border-style: dashed; }
+  .lane.ai { border-color: var(--accent); background: var(--accent-soft); }
+  .lane.oracle { border-color: var(--right); background: var(--right-bg); border-width: 2px; }
+  .lanehead {
+    display: flex; align-items: center; gap: 8px; font: 600 10.5px var(--ui);
+    letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 12px;
+  }
+  .lane.ai .lanehead { color: var(--accent); }
+  .lane.oracle .lanehead { color: var(--right); }
+  .lanehead .badge {
+    margin-left: auto; font: 500 10px var(--mono); letter-spacing: 0; text-transform: none;
+    color: var(--ink-4); border: 1px solid var(--rule); border-radius: 99px; padding: 2px 9px;
+  }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 13px;
+    border: 1px solid var(--rule); border-radius: 9px; padding: 9px 12px; background: var(--bg);
+  }
+  .chip svg { color: var(--ink-3); }
+  .lane.ai .chip { border-color: color-mix(in srgb, var(--accent) 42%, transparent); }
+  .lane.ai .chip svg { color: var(--accent); }
+  .chip b { font-weight: 600; }
+  .chip span { color: var(--ink-3); font-size: 12px; }
+  .flowdown { display: grid; place-items: center; color: var(--ink-4); }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .out {
+    border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; background: var(--bg);
+    display: flex; gap: 11px; align-items: flex-start;
+  }
+  .out.good { border-color: var(--right); }
+  .out.good svg { color: var(--right); }
+  .out.bad { border-color: var(--warn); }
+  .out.bad svg { color: var(--warn); }
+  .out h4 { margin: 0 0 3px; font: 600 14px var(--ui); }
+  .out p { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+  .loopback {
+    font: 500 12px var(--mono); color: var(--warn); background: var(--warn-bg);
+    border-radius: 8px; padding: 9px 13px; display: flex; align-items: center; gap: 9px;
+  }
+
+  /* trust split */
+  .trust { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 34px; }
+  .col { border: 1px solid var(--rule); border-radius: 13px; padding: 20px; }
+  .col.never { border-color: var(--right); background: var(--right-bg); }
+  .col.asks { border-color: var(--accent); background: var(--accent-soft); }
+  .col h3 { font: 600 15px var(--ui); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .col.never h3 { color: var(--right); }
+  .col.asks h3 { color: var(--accent); }
+  .col ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .col li { font-size: 13.5px; color: var(--ink-2); display: flex; gap: 8px; align-items: flex-start; }
+  .col li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; margin-top: 8px; flex: none; opacity: .5; }
+
+  /* feature cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+  .card { border: 1px solid var(--rule); border-radius: 13px; padding: 20px; background: var(--bg); transition: transform .2s, border-color .2s; }
   .card:hover { transform: translateY(-3px); border-color: var(--accent); }
-  .card .ic {
-    display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px;
-    background: var(--accent-soft); color: var(--accent); margin-bottom: 14px;
-  }
-  .card h3 { font: 600 16.5px var(--ui); letter-spacing: -.012em; margin: 0 0 8px; }
-  .card p { margin: 0; color: var(--ink-2); font-size: 14.5px; }
+  .card .ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); margin-bottom: 13px; }
+  .card h3 { font: 600 16px var(--ui); letter-spacing: -.012em; margin: 0 0 7px; }
+  .card p { margin: 0; color: var(--ink-2); font-size: 14px; }
 
-  .loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 8px; }
-  .loopstep { border: 1px solid var(--rule); border-radius: 11px; padding: 16px; background: var(--bg); position: relative; }
-  .loopstep .k { font: 600 10.5px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--ink-4); }
-  .loopstep .v { font-size: 14.5px; margin-top: 7px; color: var(--ink-2); }
-  .loopstep.hero { border-color: var(--right); background: var(--right-bg); }
-  .loopstep.hero .k { color: var(--right); }
-  .loopstep.warn { border-color: var(--warn); background: var(--warn-bg); }
-  .loopstep.warn .k { color: var(--warn); }
-
-  .diagram { border: 1px solid var(--rule); border-radius: 13px; padding: 22px; background: var(--bg); overflow-x: auto; }
-  .diagram .mermaid { display: flex; justify-content: center; }
-  .diagram .mermaid svg { min-width: 1180px; height: auto; }
-  .diagram .mermaid .nodeLabel, .diagram .mermaid .edgeLabel { font-size: 13px !important; }
-  .scrollnote { color: var(--ink-4); font-size: 12.5px; margin: 10px 0 0; }
-
-  .papers { display: grid; gap: 2px; }
-  .paper {
-    display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: baseline;
-    padding: 16px 0; border-bottom: 1px solid var(--rule-2);
-  }
+  /* papers */
+  .papers { display: grid; gap: 0; }
+  .paper { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: baseline; padding: 15px 0; border-bottom: 1px solid var(--rule-2); }
   .paper:last-child { border-bottom: 0; }
-  .paper .t { font-size: 15px; }
-  .paper .t b { font-weight: 600; }
-  .paper .w { color: var(--ink-3); font-size: 13.5px; margin-top: 4px; max-width: 62ch; }
-  .paper .y { font: 500 12.5px var(--mono); color: var(--ink-4); white-space: nowrap; }
+  .paper .no { font: 500 11.5px var(--mono); color: var(--ink-4); }
+  .paper .t { font-size: 14.5px; font-weight: 600; }
+  .paper .w { color: var(--ink-3); font-size: 13px; margin-top: 3px; max-width: 66ch; }
+  .paper .y { font: 500 12px var(--mono); color: var(--ink-4); white-space: nowrap; }
 
-  .final { text-align: center; padding: 96px 0; }
-  .final h2 { margin: 0 auto 18px; max-width: 22ch; }
-  .final .lead { margin: 0 auto 34px; }
-  .stack { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 44px; }
-  .pill {
-    font: 500 12.5px var(--mono); color: var(--ink-3);
-    border: 1px solid var(--rule); border-radius: 99px; padding: 6px 13px;
-  }
-  footer { border-top: 1px solid var(--rule); padding: 30px 0 56px; color: var(--ink-4); font-size: 13px; }
+  .final { text-align: center; padding: 92px 0; }
+  .final h2 { margin: 0 auto 16px; max-width: 22ch; }
+  .final .lead { margin: 0 auto 30px; }
+  .stack { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 40px; }
+  .pill { font: 500 12.5px var(--mono); color: var(--ink-3); border: 1px solid var(--rule); border-radius: 99px; padding: 6px 13px; }
+  footer { border-top: 1px solid var(--rule); padding: 28px 0 52px; color: var(--ink-4); font-size: 13px; }
   footer .wrap { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-  footer a { color: var(--ink-3); }
 
-  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s cubic-bezier(.2,.7,.3,1), transform .6s cubic-bezier(.2,.7,.3,1); }
+  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .55s cubic-bezier(.2,.7,.3,1), transform .55s cubic-bezier(.2,.7,.3,1); }
   .reveal.on { opacity: 1; transform: none; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
     .reveal { opacity: 1; transform: none; }
+    .bar .fill { width: var(--w); }
     html { scroll-behavior: auto; }
   }
-  @media (max-width: 640px) {
+  @media (max-width: 940px) {
+    .herogrid { grid-template-columns: 1fr; gap: 34px; }
+    .pipe { grid-template-columns: repeat(2, 1fr); }
+    .node::after { display: none; }
+    .trust, .split { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
     .navlinks a:not(.cta) { display: none; }
-    section { padding: 60px 0; }
-    .paper { grid-template-columns: 1fr; }
+    section { padding: 58px 0; }
+    .pipe { grid-template-columns: 1fr; }
+    .bar { grid-template-columns: 58px 1fr; gap: 12px; }
+    .bar .pct { font-size: 24px; }
+    .paper { grid-template-columns: auto 1fr; }
+    .paper .y { grid-column: 2; }
   }
 </style>
 </head>
@@ -220,11 +291,19 @@
   <g id="i-download"><path d="M10 3.5v9.9M6.4 9.8l3.6 3.7 3.6-3.7M3.5 15v1.5a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></g>
   <g id="i-sheet"><rect x="3.2" y="3.2" width="13.6" height="13.6" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.2 8h13.6M8 8v8.8" fill="none" stroke="currentColor" stroke-width="1.4"/></g>
   <g id="i-arrow"><path d="M4 10h11M11 5.5 15.6 10 11 14.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-down"><path d="M10 4v11M5.5 10.5 10 15.2l4.5-4.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-search"><circle cx="8.8" cy="8.8" r="5.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m12.7 12.7 3.8 3.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></g>
+  <g id="i-scale"><path d="M10 3.4v13.2M4.4 6.6h11.2M6.6 6.6 4.2 12h4.8zM13.4 6.6 11 12h4.8z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></g>
+  <g id="i-pen"><path d="M13.6 3.6 16.4 6.4 7.2 15.6l-3.6.8.8-3.6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></g>
+  <g id="i-refresh"><path d="M16.2 8.4A6.4 6.4 0 0 0 4.6 6.6M3.8 11.6a6.4 6.4 0 0 0 11.6 1.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M16.6 4.2v4.2h-4.2M3.4 15.8v-4.2h4.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g id="i-cloud"><path d="M6.2 15.4a3.4 3.4 0 0 1-.3-6.8 4.6 4.6 0 0 1 8.8-1 3.6 3.6 0 0 1 .6 7.1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></g>
+  <g id="i-db"><ellipse cx="10" cy="5.4" rx="6" ry="2.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M4 5.4v9.2c0 1.3 2.7 2.4 6 2.4s6-1.1 6-2.4V5.4M4 10c0 1.3 2.7 2.4 6 2.4s6-1.1 6-2.4" fill="none" stroke="currentColor" stroke-width="1.4"/></g>
+  <g id="i-alert"><path d="M10 3.6 17.5 16.4H2.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8.2v3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="14" r=".95" fill="currentColor"/></g>
 </defs></svg>
 
 <nav id="nav">
   <div class="wrap">
-    <span class="brand"><svg width="18" height="18" viewBox="0 0 20 20" style="color:var(--accent)"><use href="#i-mark"/></svg>Cassandra</span>
+    <a class="brand" href="/"><svg width="18" height="18" viewBox="0 0 20 20"><use href="#i-mark"/></svg>Cassandra</a>
     <span class="navlinks">
       <a href="#problem">The problem</a>
       <a href="#how">How it works</a>
@@ -239,34 +318,28 @@
 </nav>
 
 <header>
-  <div class="wrap">
-    <span class="eyebrow"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-bolt"/></svg>Gemini 3.5 Flash · Google ADK · Cloud Run</span>
-    <h1>Your spreadsheet says <span class="strike">$6.2M profit</span>. It lost $1.7M.</h1>
-    <p class="sub">
-      Cassandra reads the workbook your numbers come from, finds what is broken,
-      writes the correction, and <b>proves every one of them by recalculating the file</b>.
-      Nothing reaches you that it has not first proven to itself.
-    </p>
-    <div class="herobtns">
-      <a class="cta big" href="/app">Audit a workbook<svg width="17" height="17" viewBox="0 0 20 20"><use href="#i-arrow"/></svg></a>
-      <a class="cta big ghost" href="#how">See how it works</a>
-    </div>
-    <p class="runline">A real run: <b>8 findings, 5 corrections proven</b>, 114 seconds, no human involved after the file landed.</p>
-
-    <div class="proof" id="proof">
-      <div class="head">
-        <span class="dots"><i></i><i></i><i></i></span>
-        saas_projection_v11.xlsx
+  <div class="wrap herogrid">
+    <div>
+      <span class="eyebrow"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-bolt"/></svg>Gemini 3.5 Flash · Google ADK · Cloud Run</span>
+      <h1>Your spreadsheet says <span class="strike">$6.2M profit</span>. It lost $1.7M.</h1>
+      <p class="sub">Cassandra finds what is broken, writes the correction, and <b>proves every one by recalculating the file</b>. Nothing reaches you that it has not first proven to itself.</p>
+      <div class="herobtns">
+        <a class="cta big" href="/app">Audit a workbook<svg width="17" height="17" viewBox="0 0 20 20"><use href="#i-arrow"/></svg></a>
+        <a class="cta big ghost" href="#how">See how it works</a>
       </div>
+      <p class="runline">A real run: <b>8 findings, 5 proven</b>, 114 seconds, nobody involved after the file landed.</p>
+    </div>
+
+    <div class="proof">
+      <div class="head"><span class="dots"><i></i><i></i><i></i></span>saas_projection_v11.xlsx</div>
       <div class="body">
-        <div class="stepline" data-s>Reading the workbook, 81 cells across 3 sheets</div>
-        <div class="stepline" data-s>Semantic mismatch at PL!C8, labelled Operating Income but computes Gross Profit plus Operating Expenses</div>
-        <div class="stepline rej" data-s>Correction rejected: patch changed nothing at Revenue!D12</div>
-        <div class="stepline ok" data-s>Proven by recalculation: =C6-C7</div>
+        <div class="stepline" data-s><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-sheet"/></svg><span>81 cells, 3 sheets, 52 graph edges</span></div>
+        <div class="stepline" data-s><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-search"/></svg><span>PL!C8 labelled Operating Income, computes Gross Profit <em>plus</em> Expenses</span></div>
+        <div class="stepline rej" data-s><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-alert"/></svg><span>Correction rejected: changed nothing at Revenue!D12</span></div>
+        <div class="stepline ok" data-s><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-check"/></svg><span>Proven by recalculation: =C6-C7</span></div>
         <div class="numrow">
           <div><span class="tag">Reported</span><span class="was">6,246,545</span></div>
-          <span class="arrow">&rarr;</span>
-          <div><span class="tag">Correct</span><span class="now" id="counter">-1,704,250</span></div>
+          <div><span class="tag">Correct</span><span class="now" id="counter">0</span></div>
         </div>
       </div>
     </div>
@@ -276,78 +349,48 @@
 <section id="problem" class="sunk">
   <div class="wrap">
     <div class="reveal">
-      <div class="kicker">The problem</div>
+      <div class="kicker"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-alert"/></svg>The problem</div>
       <h2>Spreadsheets are the largest untested codebase on earth.</h2>
-      <p class="lead">
-        They allocate budgets, price deals, and set national policy. Almost none of them
-        are under test, and a wrong formula looks exactly like a right one.
-      </p>
+      <p class="lead">They allocate budgets, price deals, and set national policy. Almost none are under test, and a wrong formula looks exactly like a right one.</p>
     </div>
-    <div class="stats reveal">
-      <div class="stat"><div class="n">94%</div><div class="t">of spreadsheets contain at least one error</div><div class="src">Meta analysis across seven field audits</div></div>
-      <div class="stat"><div class="n">95%</div><div class="t">of financial models audited had major errors</div><div class="src">KPMG survey; 75% had significant accounting errors</div></div>
-      <div class="stat"><div class="n">86%</div><div class="t">of people made an error, while estimating their own odds at 10 to 18%</div><div class="src">Panko, controlled experiments</div></div>
+
+    <div class="bars reveal" id="bars">
+      <div class="bar" style="--w:94%"><div class="pct">94%</div><div class="track"><div class="fill"></div><div class="cap">of spreadsheets contain at least one error</div></div></div>
+      <div class="bar" style="--w:95%"><div class="pct">95%</div><div class="track"><div class="fill"></div><div class="cap">of audited financial models had major errors</div></div></div>
+      <div class="bar" style="--w:86%"><div class="pct">86%</div><div class="track"><div class="fill"></div><div class="cap">of people made an error in a controlled test</div></div></div>
+      <div class="bar" style="--w:14%"><div class="pct" style="color:var(--accent)">14%</div><div class="track"><div class="fill" style="background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 70%,transparent),var(--accent))"></div><div class="cap">is what those same people estimated their own odds to be</div></div></div>
     </div>
-    <p class="lead reveal" style="margin-top:44px">
-      That last gap is the real problem. The errors are everywhere, they are consequential,
-      and the people who wrote them are confident they are not there. Reinhart and Rogoff
-      shaped global austerity policy off a summation range that omitted five rows. JPMorgan's
-      London Whale loss involved a copy and paste error inside a $6.5B hole.
-    </p>
+
+    <div class="gapnote reveal">
+      <svg width="19" height="19" viewBox="0 0 20 20" style="color:var(--accent);margin-top:2px"><use href="#i-search"/></svg>
+      <p style="margin:0"><b>That last gap is the whole problem.</b> The errors are everywhere, they are consequential, and the people who wrote them are certain they are not there. Reinhart and Rogoff shaped global austerity policy off a sum that omitted five rows. JPMorgan's London Whale loss involved a copy and paste error inside a $6.5B hole.</p>
+    </div>
   </div>
 </section>
 
 <section id="how">
   <div class="wrap">
     <div class="reveal">
-      <div class="kicker">How it works</div>
+      <div class="kicker"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-refresh"/></svg>How it works</div>
       <h2>It does not warn you. It fixes it, then proves the fix.</h2>
-      <p class="lead">
-        Every existing tool emits a warning and asks a human to judge it. Cassandra writes
-        the correction, applies it to a copy, recalculates the entire workbook, and refuses
-        to show you anything that did not survive.
-      </p>
+      <p class="lead">Every other tool emits a warning and asks a human to judge it. Cassandra writes the correction, applies it to a copy, recalculates the whole workbook, and refuses to show you anything that did not survive.</p>
     </div>
 
-    <div class="loop reveal">
-      <div class="loopstep"><div class="k">1 · Map</div><div class="v">Parse into a formula dependency graph. No model calls: a parser does this better.</div></div>
-      <div class="loopstep"><div class="k">2 · Hunt</div><div class="v">Five deterministic detectors plus a semantic agent that reads labels against formulas.</div></div>
-      <div class="loopstep"><div class="k">3 · Judge</div><div class="v">Defect, or a legitimate modelling choice? Series seeds and conventions are dismissed.</div></div>
-      <div class="loopstep warn"><div class="k">4 · Reject</div><div class="v">A correction that fails recalculation goes back with the reason. Three attempts, then a human.</div></div>
-      <div class="loopstep hero"><div class="k">5 · Prove</div><div class="v">Moved exactly as predicted, nothing else touched. Only then does it reach you.</div></div>
+    <div class="pipe reveal">
+      <div class="node"><span class="n">01</span><svg class="ic" width="21" height="21" viewBox="0 0 20 20"><use href="#i-graph"/></svg><h3>Map</h3><p>Parse into a formula dependency graph. No model calls: a parser does this better.</p></div>
+      <div class="node"><span class="n">02</span><svg class="ic" width="21" height="21" viewBox="0 0 20 20"><use href="#i-search"/></svg><h3>Hunt</h3><p>Five deterministic detectors, plus an agent that reads labels against formulas.</p></div>
+      <div class="node"><span class="n">03</span><svg class="ic" width="21" height="21" viewBox="0 0 20 20"><use href="#i-scale"/></svg><h3>Judge</h3><p>Real defect, or a legitimate modelling choice? Series seeds get dismissed.</p></div>
+      <div class="node rej"><span class="n">04</span><svg class="ic" width="21" height="21" viewBox="0 0 20 20"><use href="#i-alert"/></svg><h3>Reject</h3><p>A fix that fails recalculation goes back with the reason. Three tries, then a human.</p></div>
+      <div class="node ok"><span class="n">05</span><svg class="ic" width="21" height="21" viewBox="0 0 20 20"><use href="#i-check"/></svg><h3>Prove</h3><p>Moved exactly as predicted, nothing else touched. Only then does it reach you.</p></div>
     </div>
 
-    <div class="cards reveal" style="margin-top:22px">
-      <div class="card">
-        <div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-bolt"/></svg></div>
-        <h3>Nobody has to remember to run it</h3>
-        <p>A workbook landing in a Cloud Storage bucket starts the audit. The human bottleneck is the actual root cause, so it is removed entirely.</p>
-      </div>
-      <div class="card">
-        <div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-clock"/></svg></div>
-        <h3>It proves defects that are not wrong yet</h3>
-        <p>A hardcoded rate equal to the assumption it replaced computes the right answer today. Cassandra proves it by perturbing the driver and showing the two workbooks diverge.</p>
-      </div>
-      <div class="card">
-        <div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-graph"/></svg></div>
-        <h3>It ranks by money, not by rule</h3>
-        <p>Findings are ordered by blast radius through the dependency graph, weighted toward the figures a person actually quotes in a meeting.</p>
-      </div>
-      <div class="card">
-        <div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-download"/></svg></div>
-        <h3>You get the corrected file</h3>
-        <p>Every verified correction applied, anything quarantined left alone, and the original never touched. A repair, not a report.</p>
-      </div>
-      <div class="card">
-        <div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-sheet"/></svg></div>
-        <h3>Three ways in</h3>
-        <p>Drop an .xlsx, paste a Google Sheets link, or let a bucket event start it. The Sheets path needs no OAuth, so nobody grants access to a whole Drive to audit one file.</p>
-      </div>
-      <div class="card">
-        <div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-lock"/></svg></div>
-        <h3>The agents hold no tools</h3>
-        <p>Not one can read a file, change a workbook, or reach the network. A prompt injected into a cell label can at worst cause a wrong judgement, which recalculation then rejects.</p>
-      </div>
+    <div class="cards reveal" style="margin-top:18px">
+      <div class="card"><div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-bolt"/></svg></div><h3>Nobody has to remember to run it</h3><p>A workbook landing in a Cloud Storage bucket starts the audit. The human bottleneck is the root cause, so it is removed.</p></div>
+      <div class="card"><div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-clock"/></svg></div><h3>It proves defects that are not wrong yet</h3><p>A hardcoded rate equal to the assumption it replaced is right today. Cassandra perturbs the driver and shows the two workbooks diverge.</p></div>
+      <div class="card"><div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-scale"/></svg></div><h3>It ranks by money, not by rule</h3><p>Ordered by blast radius through the dependency graph, weighted toward the figures people quote in meetings.</p></div>
+      <div class="card"><div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-download"/></svg></div><h3>You get the corrected file</h3><p>Every verified correction applied, anything uncertain left alone, the original never touched. A repair, not a report.</p></div>
+      <div class="card"><div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-sheet"/></svg></div><h3>Three ways in</h3><p>Drop an .xlsx, paste a Google Sheets link, or let a bucket event start it. Sheets needs no OAuth.</p></div>
+      <div class="card"><div class="ic"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-lock"/></svg></div><h3>The agents hold no tools</h3><p>None can read a file, change a workbook, or reach the network. Injected text can at worst cause a wrong judgement, which recalculation rejects.</p></div>
     </div>
   </div>
 </section>
@@ -355,91 +398,91 @@
 <section id="architecture" class="sunk">
   <div class="wrap">
     <div class="reveal">
-      <div class="kicker">Architecture</div>
+      <div class="kicker"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-graph"/></svg>Architecture</div>
       <h2>Three questions go to Gemini. Everything else is code.</h2>
-      <p class="lead">
-        Detection, the dependency graph, region clustering, and every verification are plain
-        Python. The model is consulted only where a parser genuinely cannot answer, and the
-        Verifier that decides whether it was right asks the model nothing at all.
-      </p>
+      <p class="lead">Detection, the dependency graph, clustering, and every verification are plain Python. The model is asked only what a parser genuinely cannot answer, and the Verifier that decides whether it was right asks the model nothing at all.</p>
     </div>
-    <div class="diagram reveal">
-      <pre class="mermaid">
-flowchart LR
-  XL["workbook.xlsx"] --> GCS["Cloud Storage"]
-  GCS -->|OBJECT_FINALIZE| PS["Pub/Sub"]
-  PS -->|push| CR["Cloud Run"]
-  CR <--> FS[("Firestore")]
-  CR --> CARTO
 
-  subgraph DET ["Deterministic, no model calls"]
-    CARTO["Cartographer<br/>parse, DAG, clustering"] --> HUNT["Five detectors"]
-  end
+    <div class="arch reveal">
+      <div class="lane">
+        <div class="lanehead"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-cloud"/></svg>Ingestion<span class="badge">no human in the loop</span></div>
+        <div class="chips">
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-sheet"/></svg><b>workbook.xlsx</b></span>
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-cloud"/></svg><b>Cloud Storage</b><span>OBJECT_FINALIZE</span></span>
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-bolt"/></svg><b>Pub/Sub</b><span>at least once</span></span>
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-refresh"/></svg><b>Cloud Run</b><span>scales to zero</span></span>
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-db"/></svg><b>Firestore</b><span>runs, attempts, verdicts</span></span>
+        </div>
+      </div>
 
-  subgraph AG ["Gemini 3.5 Flash, zero tools"]
-    SEM["Semantic Auditor"] --> ADJ["Adjudicator"] --> PATCH["Patcher"]
-  end
+      <div class="flowdown"><svg width="18" height="18" viewBox="0 0 20 20"><use href="#i-down"/></svg></div>
 
-  HUNT --> SEM
-  PATCH -->|proposed fix| VER{"Verifier<br/>recalculate"}
-  VER -->|moved as predicted| OK["Proven"]
-  VER -->|wrong or collateral| REJ["Rejected"]
-  REJ -->|with the reason| PATCH
-  REJ -.->|after 3 tries| QUAR["Quarantined"]
-  OK --> UI["Corrected workbook"]
-      </pre>
+      <div class="lane det">
+        <div class="lanehead"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-graph"/></svg>Deterministic<span class="badge">zero model calls</span></div>
+        <div class="chips">
+          <span class="chip"><b>Cartographer</b><span>parse, DAG, R1C1 clustering</span></span>
+          <span class="chip"><b>Blast radius</b><span>weighted toward outputs</span></span>
+          <span class="chip"><b>Five detectors</b><span>hardcode, range, pattern, sign, reference</span></span>
+        </div>
+      </div>
+
+      <div class="flowdown"><svg width="18" height="18" viewBox="0 0 20 20"><use href="#i-down"/></svg></div>
+
+      <div class="lane ai">
+        <div class="lanehead"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-bolt"/></svg>Gemini 3.5 Flash<span class="badge">zero tools held</span></div>
+        <div class="chips">
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-search"/></svg><b>Semantic Auditor</b><span>label against formula</span></span>
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-scale"/></svg><b>Adjudicator</b><span>defect or decision</span></span>
+          <span class="chip"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-pen"/></svg><b>Patcher</b><span>writes the repair</span></span>
+        </div>
+      </div>
+
+      <div class="flowdown"><svg width="18" height="18" viewBox="0 0 20 20"><use href="#i-down"/></svg></div>
+
+      <div class="lane oracle">
+        <div class="lanehead"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-check"/></svg>The Verifier<span class="badge">the only authority</span></div>
+        <p style="margin:0 0 13px;font-size:14px;color:var(--ink-2)">Applies the patch to a copy and recalculates every cell. Did the target move exactly as predicted? Did anything move outside its blast radius?</p>
+        <div class="split">
+          <div class="out good"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-check"/></svg><div><h4>Proven</h4><p>Shown with its diff, and written into the corrected workbook you download.</p></div></div>
+          <div class="out bad"><svg width="19" height="19" viewBox="0 0 20 20"><use href="#i-alert"/></svg><div><h4>Rejected</h4><p>Returned to the Patcher with the reason it failed. After three attempts, quarantined for a human.</p></div></div>
+        </div>
+        <div class="loopback" style="margin-top:12px"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-refresh"/></svg>Rejections loop back to the Patcher, carrying the reason</div>
+      </div>
     </div>
-    <p class="scrollnote reveal">Scroll the diagram sideways on a narrow screen.</p>
-    <p class="lead reveal" style="margin-top:26px">
-      Deliveries are claimed with a Firestore create, which fails when the document already
-      exists, so two workers racing the same redelivered message produce one winner without a
-      lock. State lives outside the process, so a worker can die mid run.
-    </p>
+
+    <div class="trust reveal">
+      <div class="col never">
+        <h3><svg width="17" height="17" viewBox="0 0 20 20"><use href="#i-lock"/></svg>Never asks the model</h3>
+        <ul><li>Parsing the workbook</li><li>Building the dependency graph</li><li>Clustering regions</li><li>Locating candidates</li><li><b>Verifying every repair</b></li><li>Deciding what happens next</li></ul>
+      </div>
+      <div class="col asks">
+        <h3><svg width="17" height="17" viewBox="0 0 20 20"><use href="#i-bolt"/></svg>Asks the model</h3>
+        <ul><li>Does this formula compute what its label claims?</li><li>Is this a defect, or a legitimate modelling choice?</li><li>What is the correct repair?</li></ul>
+        <p style="margin:14px 0 0;font-size:13px;color:var(--ink-3)">Every answer is checked by recalculation.</p>
+      </div>
+    </div>
   </div>
 </section>
 
 <section id="research">
   <div class="wrap">
     <div class="reveal">
-      <div class="kicker">Research</div>
+      <div class="kicker"><svg width="13" height="13" viewBox="0 0 20 20"><use href="#i-search"/></svg>Research</div>
       <h2>Standing on a decade of literature, not claiming to be first.</h2>
-      <p class="lead">
-        Spreadsheet error detection is a mature field. Cassandra's contribution is the
-        composition: autonomous, continuous, self verifying, and regression aware.
-      </p>
+      <p class="lead">Spreadsheet error detection is a mature field. The contribution here is the composition: autonomous, continuous, self verifying, and regression aware.</p>
     </div>
     <div class="papers reveal">
-      <div class="paper">
-        <div><div class="t"><b>CUSTODES: Automatic Spreadsheet Cell Clustering and Smell Detection</b></div>
-          <div class="w">Establishes that defective cells surface as outliers within clusters formed by tabulation style. The region clustering and Pattern Breaker implement this directly.</div></div>
-        <div class="y">ICSE 2016</div>
-      </div>
-      <div class="paper">
-        <div><div class="t"><b>ExceLint: Automatically Finding Spreadsheet Formula Errors</b></div>
-          <div class="w">Reference point for structural anomaly detection across a grid.</div></div>
-        <div class="y">arXiv 1901.11100</div>
-      </div>
-      <div class="paper">
-        <div><div class="t"><b>SpreadsheetLLM: Encoding Spreadsheets for Large Language Models</b></div>
-          <div class="w">Microsoft Research on compressing grids for language models without losing structure.</div></div>
-        <div class="y">arXiv 2407.09025</div>
-      </div>
-      <div class="paper">
-        <div><div class="t"><b>Benchmark Dataset Generation and Evaluation for Excel Formula Repair with LLMs</b></div>
-          <div class="w">Establishes verification of model written repairs against a calculation engine as sound methodology. Cassandra's Verifier is this idea taken as the system's only authority.</div></div>
-        <div class="y">arXiv 2508.11715</div>
-      </div>
-      <div class="paper">
-        <div><div class="t"><b>Panko, What We Know About Spreadsheet Errors</b></div>
-          <div class="w">Source of the prevalence figures, and of the taxonomy the six defect classes mirror.</div></div>
-        <div class="y">Field audits</div>
-      </div>
+      <div class="paper"><span class="no">01</span><div><div class="t">CUSTODES: Automatic Spreadsheet Cell Clustering and Smell Detection</div><div class="w">Defective cells surface as outliers within clusters formed by tabulation style. The region clustering and Pattern Breaker implement this directly.</div></div><span class="y">ICSE 2016</span></div>
+      <div class="paper"><span class="no">02</span><div><div class="t">ExceLint: Automatically Finding Spreadsheet Formula Errors</div><div class="w">Reference point for structural anomaly detection across a grid.</div></div><span class="y">arXiv 1901.11100</span></div>
+      <div class="paper"><span class="no">03</span><div><div class="t">SpreadsheetLLM: Encoding Spreadsheets for Large Language Models</div><div class="w">Microsoft Research on compressing grids for language models without losing structure.</div></div><span class="y">arXiv 2407.09025</span></div>
+      <div class="paper"><span class="no">04</span><div><div class="t">Benchmark Dataset Generation and Evaluation for Excel Formula Repair with LLMs</div><div class="w">Establishes verifying model written repairs against a calculation engine as sound method. The Verifier is this idea taken as the system's only authority.</div></div><span class="y">arXiv 2508.11715</span></div>
+      <div class="paper"><span class="no">05</span><div><div class="t">Panko, What We Know About Spreadsheet Errors</div><div class="w">Source of the prevalence figures above, and of the taxonomy the six defect classes mirror.</div></div><span class="y">Field audits</span></div>
     </div>
   </div>
 </section>
 
 <section class="final sunk">
-  <div class="wrap narrow">
+  <div class="wrap">
     <div class="reveal">
       <h2>Find out what your model is actually saying.</h2>
       <p class="lead">Drop a workbook in. Two minutes later you get the corrected file and the proof.</p>
@@ -454,46 +497,18 @@ flowchart LR
 
 <footer>
   <div class="wrap">
-    <span class="brand" style="font-size:14px"><svg width="15" height="15" viewBox="0 0 20 20" style="color:var(--accent)"><use href="#i-mark"/></svg>Cassandra</span>
+    <a class="brand" href="/" style="font-size:14px"><svg width="15" height="15" viewBox="0 0 20 20"><use href="#i-mark"/></svg>Cassandra</a>
     <span>Built for the All Things Agentic Hackathon.</span>
     <span style="margin-left:auto"><a href="https://github.com/ahammadshawki8/Cassandra">Source on GitHub</a></span>
   </div>
 </footer>
 
-<script type="module">
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-  const dark = () => document.documentElement.getAttribute("data-theme") === "dark";
-  const render = () => {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: dark() ? "dark" : "base",
-      themeVariables: dark()
-        ? { primaryColor: "#152238", primaryTextColor: "#E9EDF3", primaryBorderColor: "#4D9BFF",
-            lineColor: "#5C6474", secondaryColor: "#0F2318", tertiaryColor: "#131721",
-            fontFamily: "Inter, system-ui, sans-serif", fontSize: "15px" }
-        : { primaryColor: "#F2F7FF", primaryTextColor: "#1D1D1F", primaryBorderColor: "#0064E0",
-            lineColor: "#86878B", secondaryColor: "#F0F8F4", tertiaryColor: "#FAFAFB",
-            fontFamily: "Inter, system-ui, sans-serif", fontSize: "15px" },
-    });
-    const el = document.querySelector(".mermaid");
-    if (!el) return;
-    if (!el.dataset.src) el.dataset.src = el.textContent;
-    el.removeAttribute("data-processed");
-    el.innerHTML = el.dataset.src;
-    mermaid.run({ nodes: [el] });
-  };
-  render();
-  window.__renderMermaid = render;
-</script>
-
 <script>
-  /* theme, shared with the console through the same key */
   const root = document.documentElement;
   function applyTheme(t) {
     root.setAttribute("data-theme", t);
     document.getElementById("themeicon").setAttribute("href", t === "dark" ? "#i-sun" : "#i-moon");
     try { localStorage.setItem("cassandra-theme", t); } catch {}
-    if (window.__renderMermaid) window.__renderMermaid();
   }
   (function () {
     let t = null;
@@ -504,37 +519,33 @@ flowchart LR
   document.getElementById("theme").onclick = () =>
     applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
 
-  /* nav border once scrolled */
   const nav = document.getElementById("nav");
   addEventListener("scroll", () => nav.classList.toggle("stuck", scrollY > 8), { passive: true });
 
-  /* scroll reveals */
-  const io = new IntersectionObserver(entries => {
-    for (const e of entries) if (e.isIntersecting) { e.target.classList.add("on"); io.unobserve(e.target); }
-  }, { threshold: .12 });
+  const io = new IntersectionObserver(es => {
+    for (const e of es) if (e.isIntersecting) {
+      e.target.classList.add("on");
+      if (e.target.id === "bars") e.target.querySelectorAll(".bar").forEach((b, i) =>
+        setTimeout(() => b.classList.add("on"), i * 130));
+      io.unobserve(e.target);
+    }
+  }, { threshold: .15 });
   document.querySelectorAll(".reveal").forEach(el => io.observe(el));
 
-  /* the hero proof card plays its own run once */
-  const steps = document.querySelectorAll("[data-s]");
-  steps.forEach((el, i) => setTimeout(() => el.classList.add("in"), 380 + i * 620));
+  document.querySelectorAll("[data-s]").forEach((el, i) =>
+    setTimeout(() => el.classList.add("in"), 340 + i * 560));
 
-  /* the corrected figure counts to its value */
   const counter = document.getElementById("counter");
   const target = -1704250;
-  let started = false;
-  function countUp() {
-    if (started) return;
-    started = true;
-    const dur = 1100, t0 = performance.now();
+  setTimeout(() => {
+    const dur = 1000, t0 = performance.now();
     const tick = now => {
       const p = Math.min(1, (now - t0) / dur);
-      const eased = 1 - Math.pow(1 - p, 3);
-      counter.textContent = Math.round(target * eased).toLocaleString();
+      counter.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString();
       if (p < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }
-  setTimeout(countUp, 2600);
+  }, 2400);
 </script>
 </body>
 </html>
