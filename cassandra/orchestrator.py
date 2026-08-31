@@ -43,6 +43,17 @@ class Status(str, Enum):
     CONFIRMED = "confirmed"
     REPAIRED = "repaired"
     QUARANTINED = "quarantined"
+    RESOLVED_UPSTREAM = "resolved_upstream"
+
+
+def _referenced_cells(formula: str, default_sheet: str) -> set[str]:
+    """Every cell a formula reads, expanded from its ranges."""
+    from .core.refs import parse_refs
+
+    out: set[str] = set()
+    for ref in parse_refs(formula):
+        out.update(ref.cells(default_sheet))
+    return out
 
 
 @dataclass
@@ -84,6 +95,13 @@ class Result:
     value_after: Any = None
     downstream_moved: list[dict[str, Any]] = field(default_factory=list)
 
+    # Recalculation proves a repair is mechanically sound. It cannot prove the
+    # repair expresses what the author meant. Where the workbook no longer
+    # contains enough information to infer intent, the clearest case being a
+    # reference whose target has been deleted, the repair is a proposal and is
+    # labelled as one rather than presented as proven.
+    needs_human_intent: bool = False
+
     @property
     def materiality(self) -> float:
         """Ranking score: consequence weighted by how sure we are."""
@@ -110,6 +128,7 @@ class AuditRun:
     results: list[Result] = field(default_factory=list)
     trace: list[dict[str, Any]] = field(default_factory=list)
     headline: dict[str, Any] = field(default_factory=dict)
+    grid: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> str:
         payload = asdict(self)
@@ -204,15 +223,68 @@ class Auditor:
         if self.use_agents:
             findings.extend(self._semantic_pass(run, book, dag, baseline))
 
-        findings.sort(key=lambda f: -(f.confidence * max(f.impact, 1.0)))
+        # Deduplicate: the semantic auditor and a structural detector routinely
+        # describe the same cell from two angles. Keep the stronger signal.
+        findings = self._merge(findings)
 
+        # Handle root causes before their symptoms. A finding that sits in the
+        # blast radius of another is very often not independently broken, it is
+        # simply reporting the upstream defect faithfully.
+        upstream: set[str] = set()
         for finding in findings:
-            run.results.append(
-                self._process(run, finding, path, book, dag, baseline)
-            )
+            upstream.update(finding.blast_radius)
+        findings.sort(
+            key=lambda f: (f.cell in upstream, -(f.confidence * max(f.impact, 1.0)))
+        )
+
+        repaired_cells: set[str] = set()
+        for finding in findings:
+            # Only a purely semantic complaint can be explained away by an
+            # upstream repair. If a structural detector read this cell's own
+            # formula and objected, the cell is independently broken and must be
+            # judged on its own, however healthy its inputs have become.
+            symptom_of = None
+            if not finding.is_structural:
+                symptom_of = next(
+                    (
+                        r.cell for r in run.results
+                        if r.status is Status.REPAIRED and finding.cell in r.blast_radius
+                    ),
+                    None,
+                )
+            if symptom_of:
+                self._emit(
+                    run, "resolved_upstream",
+                    f"{finding.cell} needs no repair of its own: it reported the "
+                    f"defect at {symptom_of} faithfully and is correct now that "
+                    f"{symptom_of} is fixed",
+                    cell=finding.cell,
+                )
+                run.results.append(
+                    Result(
+                        cell=finding.cell,
+                        detector=finding.detector,
+                        defect_class=finding.defect_class,
+                        status=Status.RESOLVED_UPSTREAM,
+                        detector_confidence=finding.confidence,
+                        impact=finding.impact,
+                        blast_radius=finding.blast_radius,
+                        summary=finding.summary,
+                        evidence=finding.evidence,
+                        explanation=f"downstream of {symptom_of}, resolved by that repair",
+                        value_before=baseline.values.get(finding.cell),
+                    )
+                )
+                continue
+
+            result = self._process(run, finding, path, book, dag, baseline)
+            run.results.append(result)
+            if result.status is Status.REPAIRED:
+                repaired_cells.add(result.cell)
 
         run.results.sort(key=lambda r: -r.materiality)
         run.headline = self._headline(run, book, baseline)
+        run.grid = self._grid(book, baseline)
         run.finished_at = time.time()
         self._emit(
             run, "done",
@@ -274,6 +346,50 @@ class Auditor:
                 cell=verdict.cell,
             )
         return out
+
+    def _merge(self, findings: list[Finding]) -> list[Finding]:
+        """One finding per cell, keeping the strongest signal and pooling evidence."""
+        best: dict[str, Finding] = {}
+        for finding in findings:
+            existing = best.get(finding.cell)
+            if existing is None:
+                best[finding.cell] = finding
+                continue
+            keep, drop = (
+                (finding, existing)
+                if finding.confidence > existing.confidence
+                else (existing, finding)
+            )
+            keep.evidence.setdefault("also flagged by", drop.detector)
+            keep.evidence.setdefault("second observation", drop.summary)
+            keep.detectors = keep.detectors | drop.detectors
+            best[finding.cell] = keep
+        return list(best.values())
+
+    def _sane(self, run, result, proposal, book) -> str:
+        """Reject a proposal on inspection, before spending a recalculation on it.
+
+        The patcher occasionally invents a reference just outside the used range,
+        which is cheap to catch by reading the formula and expensive to catch by
+        calculating the workbook.
+        """
+        formula = (proposal.formula or "").strip()
+        if not formula.startswith("="):
+            return "a formula must begin with an equals sign"
+        if formula == (result.original_formula or "").strip():
+            return "the proposed formula is identical to the original"
+
+        sheet = result.cell.split("!", 1)[0]
+        unknown = [
+            ref for ref in sorted(_referenced_cells(formula, sheet))
+            if book.get(ref) is None
+        ]
+        if unknown:
+            return (
+                f"references {', '.join(unknown[:3])}, which "
+                f"{'do' if len(unknown) > 1 else 'does'} not exist in this workbook"
+            )
+        return ""
 
     def _process(self, run, finding, path, book, dag, baseline) -> Result:
         cell = book.get(finding.cell)
@@ -348,6 +464,24 @@ class Auditor:
                 rejections.append("the patcher returned nothing usable")
                 continue
 
+            objection = self._sane(run, result, proposal, book)
+            if objection:
+                result.attempts.append(
+                    PatchAttempt(
+                        attempt=attempt, formula=proposal.formula,
+                        predicted=proposal.predicted_value, passed=False,
+                        reason=objection, rationale=proposal.rationale,
+                        latent=proposal.is_latent,
+                    )
+                )
+                rejections.append(f"{proposal.formula} rejected because it {objection}")
+                self._emit(
+                    run, "rejected",
+                    f"{finding.cell} attempt {attempt} rejected on inspection: {objection}",
+                    cell=finding.cell, attempt=attempt, formula=proposal.formula,
+                )
+                continue
+
             verdict = self._prove(path, result, proposal, radius, baseline, run.sheets)
 
             result.attempts.append(
@@ -365,6 +499,7 @@ class Auditor:
             if verdict.passed:
                 result.status = Status.REPAIRED
                 result.final_formula = proposal.formula
+                result.needs_human_intent = "broken reference" in result.defect_class
                 result.value_after = verdict.observed
                 result.downstream_moved = [
                     {"cell": d.key, "before": d.before, "after": d.after}
@@ -373,7 +508,11 @@ class Auditor:
                 ]
                 self._emit(
                     run, "verified",
-                    f"{finding.cell} repaired and proven: {proposal.formula}",
+                    f"{finding.cell} "
+                    + ("repaired, but the original intent cannot be recovered from "
+                       "the workbook so this needs a human to confirm: "
+                       if result.needs_human_intent else "repaired and proven: ")
+                    + proposal.formula,
                     cell=finding.cell, formula=proposal.formula,
                     moved=len(result.downstream_moved),
                 )
@@ -408,6 +547,27 @@ class Auditor:
             path, result.cell, proposal.formula, proposal.predicted_value,
             radius, baseline, sheets,
         )
+
+    def _grid(self, book, baseline) -> dict[str, Any]:
+        """A compact rendering of the workbook for the dashboard."""
+        sheets: dict[str, Any] = {}
+        for name, sheet in book.sheets.items():
+            cells = {}
+            for key, cell in sheet.cells.items():
+                cells[key.split("!", 1)[1]] = {
+                    "r": cell.ref.row,
+                    "c": cell.ref.col,
+                    "f": cell.formula,
+                    "v": baseline.values.get(key, cell.value),
+                    "l": cell.label,
+                    "fmt": cell.number_format,
+                }
+            sheets[name] = {
+                "rows": sheet.max_row,
+                "cols": sheet.max_col,
+                "cells": cells,
+            }
+        return sheets
 
     def _headline(self, run, book, baseline) -> dict[str, Any]:
         """The single number a reader of this model would quote, and its fate."""

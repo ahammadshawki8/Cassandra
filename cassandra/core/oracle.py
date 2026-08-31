@@ -81,15 +81,31 @@ def _numeric(value: Any) -> float | None:
     return None
 
 
+# A blank cell is spelled differently depending on who is reporting it.
+# openpyxl gives None, the calculation engine gives its own empty sentinel, and
+# a cleared cell reads as an empty string. Treating these as distinct values
+# manufactures phantom movement and rejects otherwise valid patches.
+_BLANKS = {"", "empty", "none", "<empty>"}
+
+
+def _is_blank(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in _BLANKS
+    name = getattr(value, "name", None)
+    return isinstance(name, str) and name.strip().lower() in _BLANKS
+
+
 def equal(a: Any, b: Any) -> bool:
     """Tolerance aware equality. Floating point noise is not a real change."""
+    if _is_blank(a) and _is_blank(b):
+        return True
     na, nb = _numeric(a), _numeric(b)
     if na is not None and nb is not None:
         if na == nb:
             return True
         return abs(na - nb) <= max(ABS_TOL, REL_TOL * max(abs(na), abs(nb)))
-    if a is None and b is None:
-        return True
     return str(a) == str(b)
 
 
@@ -196,6 +212,20 @@ def verify(
             return Verdict(
                 False,
                 f"patch produced Excel error {observed} at {target}",
+                target,
+                predicted_value,
+                observed,
+            )
+
+        # Emptying a cell always satisfies "the value moved" and never causes
+        # collateral movement, so without this check the cheapest way to pass
+        # verification is to point the formula at a blank cell. A repair that
+        # destroys the figure is not a repair.
+        if _is_blank(observed) and not _is_blank(base.get(target)):
+            return Verdict(
+                False,
+                f"patch empties {target}, which held {base.get(target)}: a repair "
+                f"must produce a value, not remove one",
                 target,
                 predicted_value,
                 observed,

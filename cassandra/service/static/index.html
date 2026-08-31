@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cassandra</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121820;
+    --panel-2: #161e28;
+    --line: #222d3a;
+    --ink: #e6edf3;
+    --dim: #8b9aad;
+    --faint: #5b6979;
+    --accent: #4a9eff;
+    --critical: #ff5c5c;
+    --material: #ffa53c;
+    --minor: #ffd93c;
+    --ok: #3ddc84;
+    --radius-glow: rgba(74,158,255,.18);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { margin: 0; font-size: 17px; letter-spacing: .16em; font-weight: 600; }
+  .brand .sub { color: var(--faint); font-size: 12px; letter-spacing: .02em; }
+  .spacer { flex: 1; }
+  .pill {
+    font: 500 11px/1 var(--mono); padding: 6px 10px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--dim); background: var(--panel-2);
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+  .dot.live { background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  button {
+    font: 600 13px/1 inherit; color: #04121f; background: var(--accent);
+    border: 0; border-radius: 7px; padding: 9px 15px; cursor: pointer;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  main { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(340px,.65fr); gap: 1px; background: var(--line); }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  .col { background: var(--bg); min-width: 0; }
+  section { border-bottom: 1px solid var(--line); padding: 16px 20px; }
+  h2 {
+    margin: 0 0 12px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--faint); font-weight: 600;
+  }
+
+  /* Headline swing */
+  .headline { background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+  .swing { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .swing .label { color: var(--dim); font-size: 13px; }
+  .swing .was { font: 600 22px var(--mono); color: var(--critical); text-decoration: line-through; text-decoration-thickness: 2px; opacity: .75; }
+  .swing .arrow { color: var(--faint); }
+  .swing .now { font: 700 30px var(--mono); color: var(--ok); }
+  .swing .delta { font: 600 13px var(--mono); color: var(--material); }
+  .muted { color: var(--faint); font-size: 13px; }
+
+  /* Grid */
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tab {
+    font: 500 12px var(--mono); padding: 5px 11px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); color: var(--dim); background: var(--panel);
+  }
+  .tab.on { color: var(--ink); border-color: var(--accent); background: var(--panel-2); }
+  .gridwrap { overflow: auto; max-height: 460px; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: separate; border-spacing: 0; font: 12px var(--mono); width: max-content; min-width: 100%; }
+  th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 5px 9px; white-space: nowrap; }
+  th { background: var(--panel-2); color: var(--faint); font-weight: 500; position: sticky; top: 0; z-index: 2; }
+  th.rowhdr, td.rowhdr { position: sticky; left: 0; background: var(--panel-2); color: var(--faint); z-index: 1; text-align: right; }
+  th.corner { z-index: 3; left: 0; }
+  td { color: var(--dim); max-width: 210px; overflow: hidden; text-overflow: ellipsis; }
+  td.txt { color: var(--ink); }
+  td.num { text-align: right; color: var(--ink); }
+  td.formula { color: var(--accent); }
+  td.flag { cursor: pointer; }
+  td.flag.critical { background: rgba(255,92,92,.16); box-shadow: inset 2px 0 0 var(--critical); }
+  td.flag.material { background: rgba(255,165,60,.14); box-shadow: inset 2px 0 0 var(--material); }
+  td.flag.minor    { background: rgba(255,217,60,.12); box-shadow: inset 2px 0 0 var(--minor); }
+  td.flag.ok       { background: rgba(61,220,132,.13); box-shadow: inset 2px 0 0 var(--ok); }
+  td.radius { background: var(--radius-glow); animation: bloom .5s ease-out; }
+  td.origin { outline: 2px solid var(--accent); outline-offset: -2px; }
+  @keyframes bloom { from { background: rgba(74,158,255,.45); } }
+
+  /* Findings */
+  .finding {
+    border: 1px solid var(--line); border-left-width: 3px; border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 10px; background: var(--panel); cursor: pointer;
+  }
+  .finding:hover { background: var(--panel-2); }
+  .finding.critical { border-left-color: var(--critical); }
+  .finding.material { border-left-color: var(--material); }
+  .finding.minor { border-left-color: var(--minor); }
+  .finding.dismissed, .finding.resolved_upstream { border-left-color: var(--faint); opacity: .62; }
+  .finding.repaired { border-left-color: var(--ok); }
+  .fhead { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; flex-wrap: wrap; }
+  .cell { font: 700 13px var(--mono); color: var(--ink); }
+  .badge {
+    font: 600 10px/1 var(--mono); padding: 4px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .badge.repaired { background: rgba(61,220,132,.16); color: var(--ok); }
+  .badge.quarantined { background: rgba(255,165,60,.16); color: var(--material); }
+  .badge.dismissed, .badge.resolved_upstream { background: rgba(139,154,173,.14); color: var(--dim); }
+  .badge.sev { background: rgba(255,92,92,.14); color: var(--critical); }
+  .badge.warn { background: rgba(255,217,60,.14); color: var(--minor); }
+  .fbody { color: var(--dim); font-size: 13px; }
+  .diff { margin-top: 9px; font: 12px var(--mono); }
+  .diff .row { display: flex; gap: 8px; padding: 3px 0; }
+  .diff .minus { color: var(--critical); }
+  .diff .plus { color: var(--ok); }
+  .attempts { margin-top: 9px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .attempt { font: 11px var(--mono); color: var(--faint); padding: 3px 0; }
+  .attempt .rej { color: var(--material); }
+  .attempt .acc { color: var(--ok); }
+
+  /* Trace */
+  .trace { height: 100%; }
+  .log { font: 11.5px/1.6 var(--mono); max-height: 620px; overflow: auto; }
+  .ev { display: flex; gap: 9px; padding: 3px 0; border-bottom: 1px solid rgba(34,45,58,.5); }
+  .ev .t { color: var(--faint); flex: 0 0 52px; text-align: right; }
+  .ev .k { flex: 0 0 96px; color: var(--dim); }
+  .ev .m { flex: 1; color: var(--dim); min-width: 0; overflow-wrap: anywhere; }
+  .ev.verified .k, .ev.verified .m { color: var(--ok); }
+  .ev.rejected .k, .ev.rejected .m { color: var(--material); }
+  .ev.confirmed .k { color: var(--critical); }
+  .ev.agent_finding .k, .ev.agent_finding .m { color: var(--accent); }
+  .ev.dismissed .k { color: var(--faint); }
+  .ev.regression .k, .ev.regression .m { color: var(--critical); }
+  .ev.fatal .k, .ev.fatal .m { color: var(--critical); }
+  .stats { display: flex; gap: 18px; flex-wrap: wrap; }
+  .stat .n { font: 700 20px var(--mono); }
+  .stat .l { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 11px; color: var(--faint); }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 2 3 6.2v6.1c0 4.6 3.8 8.6 9 9.7 5.2-1.1 9-5.1 9-9.7V6.2z"
+            stroke="#4a9eff" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M8.4 12.2l2.6 2.6 4.8-5.2" stroke="#3ddc84" stroke-width="1.9"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <h1>CASSANDRA</h1>
+      <div class="sub">continuous integration for the spreadsheets that run your company</div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <span class="pill"><span class="dot" id="dot"></span><span id="conn">connecting</span></span>
+  <span class="pill" id="engine">gemini-3.5-flash on vertex ai</span>
+  <button id="run">Run audit</button>
+</header>
+
+<main>
+  <div class="col">
+    <section class="headline">
+      <h2>Headline impact</h2>
+      <div id="headline"><div class="muted">No completed run yet. Drop a workbook in the bucket, or press Run audit.</div></div>
+    </section>
+
+    <section>
+      <h2>Workbook <span id="wbname" class="muted"></span></h2>
+      <div class="tabs" id="tabs"></div>
+      <div class="gridwrap"><table id="grid"><tbody><tr><td class="muted">waiting for a run</td></tr></tbody></table></div>
+      <div class="legend">
+        <span><i style="background:var(--critical)"></i>critical</span>
+        <span><i style="background:var(--material)"></i>material</span>
+        <span><i style="background:var(--minor)"></i>minor</span>
+        <span><i style="background:var(--ok)"></i>repaired</span>
+        <span><i style="background:var(--radius-glow)"></i>blast radius of the selected cell</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Findings by materiality</h2>
+      <div id="findings"><div class="muted">nothing yet</div></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section>
+      <h2>Run</h2>
+      <div class="stats" id="stats"><div class="muted">idle</div></div>
+    </section>
+    <section class="trace">
+      <h2>Agent reasoning chain</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const COLS = n => { let s=""; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=(n-r-1)/26|0; } return s; };
+const fmtNum = v => typeof v === "number"
+  ? (Math.abs(v) >= 1000 ? v.toLocaleString(undefined,{maximumFractionDigits:0})
+                         : v.toLocaleString(undefined,{maximumFractionDigits:4}))
+  : v;
+
+let RUN = null, SHEET = null, SELECTED = null;
+
+/* live trace */
+const es = new EventSource("/events");
+es.onopen = () => { $("dot").classList.add("live"); $("conn").textContent = "live"; };
+es.onerror = () => { $("dot").classList.remove("live"); $("conn").textContent = "reconnecting"; };
+es.onmessage = e => {
+  const ev = JSON.parse(e.data);
+  addEvent(ev);
+  if (ev.kind === "stored" && ev.run_id) loadRun(ev.run_id);
+};
+
+function addEvent(ev) {
+  const row = document.createElement("div");
+  row.className = "ev " + (ev.kind || "");
+  row.innerHTML = `<span class="t">${(ev.t ?? 0).toFixed(1)}s</span>`
+                + `<span class="k">${ev.kind || ""}</span>`
+                + `<span class="m"></span>`;
+  row.querySelector(".m").textContent = ev.message || "";
+  const log = $("log");
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+$("run").onclick = async () => {
+  $("run").disabled = true;
+  $("log").innerHTML = "";
+  try {
+    await fetch("/api/audit", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ path: "demo/saas_projection_v11.xlsx" })
+    });
+  } finally {
+    setTimeout(() => { $("run").disabled = false; }, 4000);
+  }
+};
+
+async function loadRun(id) {
+  const r = await fetch("/api/runs/" + id);
+  RUN = await r.json();
+  if (RUN.error) return;
+  SHEET = (RUN.sheets || [])[0] || null;
+  render();
+}
+
+async function loadLatest() {
+  const rows = await (await fetch("/api/runs")).json();
+  if (rows && rows.length) loadRun(rows[0].run_id);
+}
+
+function render() {
+  renderHeadline(); renderStats(); renderTabs(); renderGrid(); renderFindings();
+}
+
+function renderHeadline() {
+  const h = RUN.headline || {};
+  const el = $("headline");
+  $("wbname").textContent = RUN.workbook ? "— " + RUN.workbook.split(/[\\/]/).pop() : "";
+  if (!h.cell) {
+    el.innerHTML = `<div class="muted">No figure moved. Nothing verified as broken in this revision.</div>`;
+    return;
+  }
+  const delta = (h.after ?? 0) - (h.before ?? 0);
+  el.innerHTML = `
+    <div class="swing">
+      <span class="label">${h.label || h.cell}</span>
+      <span class="was">${fmtNum(h.before)}</span>
+      <span class="arrow">&rarr;</span>
+      <span class="now">${fmtNum(h.after)}</span>
+      <span class="delta">${delta >= 0 ? "+" : ""}${fmtNum(delta)}</span>
+    </div>
+    <div class="muted" style="margin-top:6px">
+      ${h.cells_corrected} defect${h.cells_corrected === 1 ? "" : "s"} repaired and proven by recalculation
+    </div>`;
+}
+
+function renderStats() {
+  const rs = RUN.results || [];
+  const by = s => rs.filter(r => r.status === s).length;
+  const secs = ((RUN.finished_at || 0) - (RUN.started_at || 0)).toFixed(1);
+  $("stats").innerHTML = [
+    ["repaired", by("repaired"), "var(--ok)"],
+    ["quarantined", by("quarantined"), "var(--material)"],
+    ["dismissed", by("dismissed") + by("resolved_upstream"), "var(--dim)"],
+    ["cells", RUN.cell_count, "var(--ink)"],
+    ["seconds", secs, "var(--ink)"],
+  ].map(([l, n, c]) => `<div class="stat"><div class="n" style="color:${c}">${n}</div><div class="l">${l}</div></div>`).join("");
+}
+
+function renderTabs() {
+  $("tabs").innerHTML = (RUN.sheets || []).map(s =>
+    `<span class="tab ${s === SHEET ? "on" : ""}" data-s="${s}">${s}</span>`).join("");
+  document.querySelectorAll(".tab").forEach(t =>
+    t.onclick = () => { SHEET = t.dataset.s; SELECTED = null; renderTabs(); renderGrid(); });
+}
+
+function statusClass(r) {
+  if (r.status === "repaired") return "ok";
+  if (r.status === "dismissed" || r.status === "resolved_upstream") return "";
+  return r.severity || "minor";
+}
+
+function renderGrid() {
+  const sheet = (RUN.grid || {})[SHEET];
+  const table = $("grid");
+  if (!sheet) { table.innerHTML = `<tbody><tr><td class="muted">no grid</td></tr></tbody>`; return; }
+
+  const flags = {};
+  (RUN.results || []).forEach(r => {
+    if (!r.cell.startsWith(SHEET + "!")) return;
+    flags[r.cell.split("!")[1]] = r;
+  });
+
+  let radius = new Set();
+  if (SELECTED) {
+    const hit = (RUN.results || []).find(r => r.cell === SELECTED);
+    (hit ? hit.blast_radius || [] : []).forEach(k => {
+      if (k.startsWith(SHEET + "!")) radius.add(k.split("!")[1]);
+    });
+  }
+
+  const rows = Math.min(sheet.rows || 0, 40), cols = Math.min(sheet.cols || 0, 12);
+  let html = "<thead><tr><th class='corner rowhdr'></th>";
+  for (let c = 1; c <= cols; c++) html += `<th>${COLS(c)}</th>`;
+  html += "</tr></thead><tbody>";
+
+  for (let r = 1; r <= rows; r++) {
+    html += `<tr><td class="rowhdr">${r}</td>`;
+    for (let c = 1; c <= cols; c++) {
+      const ref = COLS(c) + r, cell = sheet.cells[ref];
+      const flag = flags[ref];
+      const cls = ["", flag ? "flag " + statusClass(flag) : "",
+                   radius.has(ref) ? "radius" : "",
+                   SELECTED === SHEET + "!" + ref ? "origin" : ""].join(" ");
+      let text = "", kind = "";
+      if (cell) {
+        if (typeof cell.v === "number") { text = fmtNum(cell.v); kind = "num"; }
+        else if (cell.f) { text = cell.f; kind = "formula"; }
+        else if (cell.v != null) { text = String(cell.v); kind = "txt"; }
+      }
+      const title = cell ? `${SHEET}!${ref}${cell.f ? "  " + cell.f : ""}` : "";
+      html += `<td class="${kind} ${cls}" data-ref="${SHEET}!${ref}" title="${title.replace(/"/g,"&quot;")}">${text}</td>`;
+    }
+    html += "</tr>";
+  }
+  table.innerHTML = html + "</tbody>";
+
+  table.querySelectorAll("td.flag").forEach(td =>
+    td.onclick = () => select(td.dataset.ref));
+}
+
+function select(ref) {
+  SELECTED = SELECTED === ref ? null : ref;
+  renderGrid();
+  const card = document.querySelector(`.finding[data-cell="${ref}"]`);
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function renderFindings() {
+  const rs = RUN.results || [];
+  if (!rs.length) { $("findings").innerHTML = `<div class="muted">nothing found</div>`; return; }
+  $("findings").innerHTML = rs.map(r => {
+    const attempts = (r.attempts || []).map(a =>
+      `<div class="attempt"><span class="${a.passed ? "acc" : "rej"}">`
+      + `${a.passed ? "VERIFIED" : "REJECTED"}</span> attempt ${a.attempt}: ${esc(a.formula)}`
+      + (a.passed ? "" : `<br><span style="padding-left:18px">${esc(a.reason)}</span>`) + `</div>`).join("");
+    const diff = r.final_formula ? `
+      <div class="diff">
+        <div class="row"><span class="minus">-</span><span class="minus">${esc(r.original_formula)}</span></div>
+        <div class="row"><span class="plus">+</span><span class="plus">${esc(r.final_formula)}</span></div>
+        <div class="row"><span style="color:var(--faint)">=</span>
+          <span>${fmtNum(r.value_before)} &rarr; <b style="color:var(--ok)">${fmtNum(r.value_after)}</b></span></div>
+      </div>` : "";
+    return `<div class="finding ${r.status === "repaired" ? "repaired" : r.status === "dismissed" || r.status === "resolved_upstream" ? "dismissed" : (r.severity || "minor")}" data-cell="${r.cell}">
+      <div class="fhead">
+        <span class="cell">${r.cell}</span>
+        <span class="badge ${r.status}">${r.status.replace("_"," ")}</span>
+        ${r.severity ? `<span class="badge sev">${r.severity}</span>` : ""}
+        ${r.needs_human_intent ? `<span class="badge warn">needs human intent</span>` : ""}
+        <span class="muted" style="margin-left:auto">${r.detector}</span>
+      </div>
+      <div class="fbody">${esc(r.explanation || r.summary || "")}</div>
+      ${diff}
+      ${attempts ? `<div class="attempts">${attempts}</div>` : ""}
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".finding").forEach(el =>
+    el.onclick = () => select(el.dataset.cell));
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+
+fetch("/healthz").then(r => r.json()).then(h => {
+  $("engine").textContent = `${h.model} on ${h.vertex === "TRUE" ? "vertex ai" : "gemini api"} · ${h.store}`;
+}).catch(() => {});
+loadLatest();
+</script>
+</body>
+</html>

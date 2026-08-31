@@ -50,6 +50,26 @@ class Finding:
     blast_radius: list[str] = field(default_factory=list)
     impact: float = 0.0
 
+    # Every detector that flagged this cell. A cell can be reported both by a
+    # structural detector reading its formula and by the Semantic Auditor
+    # reading its value, and the difference decides whether the finding can be
+    # explained away by an upstream repair.
+    detectors: set[str] = field(default_factory=set)
+
+    def __post_init__(self) -> None:
+        if not self.detectors:
+            self.detectors = {self.detector}
+
+    @property
+    def is_structural(self) -> bool:
+        """True if any detector examined this cell's own formula.
+
+        A structural finding is about how the cell is written, so repairing
+        something upstream cannot fix it. A purely semantic finding says the
+        value looks wrong, which an upstream defect explains perfectly well.
+        """
+        return bool(self.detectors - {"semantic_auditor"})
+
     def to_prompt(self) -> str:
         """Render the finding as the context an agent reasons over."""
         lines = [
