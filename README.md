@@ -64,53 +64,54 @@ That rejection is not staged. The Patcher's first attempt was refused by recalcu
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    XL["workbook.xlsx"]
+    GCS["Cloud Storage<br/><code>OBJECT_FINALIZE</code>"]
+    PS["Pub/Sub"]
+    CR["Cloud Run<br/><i>scales to zero</i>"]
+    FS[("Firestore<br/>runs · attempts · verdicts")]
+
+    XL -->|dropped in| GCS --> PS -->|push| CR
+    CR <--> FS
+    CR --> CARTO
+
+    subgraph DET ["Deterministic · no model calls"]
+        CARTO["<b>Cartographer</b><br/>parse · dependency DAG<br/>region clustering"]
+        HUNT["<b>Five detectors</b><br/>hardcode · range · pattern<br/>sign · reference"]
+        CARTO --> HUNT
+    end
+
+    subgraph AG ["Agent fleet · Gemini 3.5 Flash · zero tools"]
+        SEM["<b>Semantic Auditor</b>"] --> ADJ["<b>Adjudicator</b>"] --> PATCH["<b>Patcher</b>"]
+    end
+
+    HUNT --> SEM
+    PATCH -->|proposed fix| VER{"<b>Verifier</b><br/>recalculate the workbook"}
+    VER -->|"moved as predicted"| OK["<b>Proven</b>"]
+    VER -->|"wrong or collateral"| REJ["<b>Rejected</b>"]
+    REJ -->|"back with the reason"| PATCH
+    REJ -.->|"after 3 attempts"| QUAR["<b>Quarantined</b>"]
+    OK --> UI["Dashboard"]
+    QUAR --> UI
+
+    classDef gcp fill:#E8F0FE,stroke:#8AB4F8,stroke-width:2px,color:#1A237E
+    classDef det fill:#F5F3FF,stroke:#B4A7F5,stroke-width:1.5px,color:#33304A
+    classDef agent fill:#F2EFFB,stroke:#7B6CF6,stroke-width:2px,color:#33304A
+    classDef oracle fill:#E4F8F1,stroke:#4FC3A1,stroke-width:3px,color:#23795F
+    classDef good fill:#E4F8F1,stroke:#4FC3A1,stroke-width:2px,color:#23795F
+    classDef bad fill:#FFF6E0,stroke:#FFC145,stroke-width:2px,color:#96660A
+    classDef plain fill:#FFFFFF,stroke:#EDE7F8,stroke-width:2px,color:#33304A
+    class GCS,PS,CR,FS gcp
+    class CARTO,HUNT det
+    class SEM,ADJ,PATCH agent
+    class VER oracle
+    class OK good
+    class REJ,QUAR bad
+    class XL,UI plain
 ```
-   workbook.xlsx
-        |
-        v
-  [ Cloud Storage ] --OBJECT_FINALIZE--> [ Pub/Sub ] --push--> [ Cloud Run ]
-                                                                    |
-                                          +-------------------------+
-                                          |                         |
-                                          v                         v
-                              [ CARTOGRAPHER ]              [ Firestore ]
-                              deterministic, no LLM          runs, findings
-                              parse, DAG, clustering         patch attempts
-                              R1C1 signatures                verdicts
-                                          |                  dismissals
-                                          v                  delivery claims
-                        +-----------------+-----------------+
-                        |   DETECTORS (deterministic)       |
-                        |   hardcode   range    pattern     |
-                        |   sign       reference            |
-                        +-----------------+-----------------+
-                                          |
-                                          v
-                              [ SEMANTIC AUDITOR ]   Gemini 3.5 Flash
-                              reads label vs formula
-                                          |
-                                          v
-                              [ ADJUDICATOR ]        Gemini 3.5 Flash
-                              defect or modelling decision
-                                          |
-                                          v
-                              [ PATCHER ]            Gemini 3.5 Flash
-                              writes the repair
-                                          |
-                                          v
-                              [ VERIFIER ] <-------------+
-                              recalculate the workbook   |
-                                          |              |
-                              +-----------+-----------+  |
-                              |                       |  |
-                           REJECT                   PASS |
-                        with the reason ---------------->+
-                        3 attempts, then                 |
-                        quarantine for a human           v
-                                                  [ Dashboard ]
-                                                  grid, blast radius,
-                                                  trace, value diff
-```
+
+More diagrams, including the verification loop and exactly where the model is trusted, are in [docs/architecture.md](docs/architecture.md).
 
 ### Design principles
 
