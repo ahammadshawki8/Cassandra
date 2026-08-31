@@ -113,11 +113,17 @@ def _audit(path: str, source: str, label: str = "") -> None:
         ).audit(path)
         _sources[run.run_id] = path
 
+        # What is newly broken since the last revision belongs in the record,
+        # not only in the live stream. Published events reach whoever happens to
+        # be watching; the trace is what anyone can open afterwards.
         previous = store.previous_for(path, exclude=run.run_id)
         if previous:
-            regressions = _regressions(previous, run)
-            for line in regressions:
-                bus.publish({"t": 0, "kind": "regression", "message": line})
+            elapsed = round(run.finished_at - run.started_at, 3)
+            for line in _regressions(previous, run):
+                run.regressions.append(line)
+                event = {"t": elapsed, "kind": "regression", "message": line}
+                run.trace.append(event)
+                bus.publish(event)
 
         store.save(run)
         bus.publish({
@@ -320,6 +326,7 @@ def run_detail(run_id: str) -> JSONResponse:
         for k in (
             "run_id", "workbook", "started_at", "finished_at",
             "sheets", "cell_count", "formula_count", "headline", "settled",
+            "regressions",
         )
     }
 
@@ -447,6 +454,13 @@ def _page(name: str) -> str:
 def landing() -> str:
     """What the project is, for someone arriving with no context."""
     return _page("landing.html")
+
+
+@app.get("/deck", response_class=HTMLResponse)
+def deck() -> str:
+    """The presentation deck, served so it can be shown full screen."""
+    with open(os.path.join(os.path.dirname(HERE), "..", "docs", "deck.html"), encoding="utf-8") as h:
+        return h.read()
 
 
 @app.get("/app", response_class=HTMLResponse)

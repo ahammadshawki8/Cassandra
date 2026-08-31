@@ -186,10 +186,17 @@ def build_v12(path: str) -> str:
     pl["C8"] = "=C6-C7"
     pl["C13"] = "=Revenue!C12*4"
 
-    # NEW in this revision: someone updated the gross margin assumption inline
-    # instead of on the Assumptions sheet, so cost of revenue no longer tracks
-    # the driver every other figure uses.
-    pl["C5"] = "=-C4*(1-0.71)"
+    # NEW in this revision: somebody typed a one off uplift into Q3 bookings
+    # rather than adjusting the assumption, so that quarter no longer computes
+    # the way the three beside it do.
+    #
+    # An earlier draft put the new defect at PL!C5 instead, hardcoding the gross
+    # margin. Cassandra did not find it, and the reason is worth keeping: the
+    # hardcode detector reports a cell that breaks its region's norm, and the
+    # PL column has five different formulas in five rows, so there is no norm to
+    # break. Hardcodes are caught where a pattern exists to violate, which is
+    # most of a real model and not all of it.
+    rev["D6"] = "=D5*Assumptions!$B$6*1.12"
 
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     book.save(path)

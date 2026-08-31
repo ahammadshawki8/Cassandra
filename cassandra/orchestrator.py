@@ -130,6 +130,7 @@ class AuditRun:
     trace: list[dict[str, Any]] = field(default_factory=list)
     headline: dict[str, Any] = field(default_factory=dict)
     settled: list[str] = field(default_factory=list)
+    regressions: list[str] = field(default_factory=list)
 
     def to_json(self) -> str:
         payload = asdict(self)

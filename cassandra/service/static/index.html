@@ -179,6 +179,15 @@
   .spin { color: var(--accent); animation: spin 1.1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  .regress {
+    border: 1px solid var(--warn); background: var(--warn-bg); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 14px;
+  }
+  .reghead {
+    display: flex; align-items: center; gap: 8px; font: 600 11px var(--ui);
+    letter-spacing: .09em; text-transform: uppercase; color: var(--warn); margin-bottom: 8px;
+  }
+  .regline { font-size: 13.5px; color: var(--ink-2); padding: 3px 0; }
   .verdict { border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; margin-bottom: 20px; background: var(--bg); box-shadow: var(--shadow); }
   .verdict .top { padding: 17px 19px; }
   .verdict .cap { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3); }
@@ -639,9 +648,15 @@ function paint() {
   const h = RUN.headline || {};
   const file = (RUN.workbook || "").split(/[\\/]/).pop();
 
+  const regs = RUN.regressions || [];
+  const regBanner = regs.length ? `<div class="regress rise">
+      <div class="reghead">${ico("i-warn", 14)}Newly broken in this revision</div>
+      ${regs.map(x => `<div class="regline">${esc(x)}</div>`).join("")}
+    </div>` : "";
+
   if (h.cell) {
     const off = Math.abs((h.after ?? 0) - (h.before ?? 0));
-    $("verdict").innerHTML = `<div class="verdict rise">
+    $("verdict").innerHTML = regBanner + `<div class="verdict rise">
       <div class="top">
         <div class="cap">${ico("i-grid", 13)}${esc(file)} would have reported</div>
         <div class="subj">${esc(h.label || h.cell)}</div>
@@ -657,7 +672,7 @@ function paint() {
       </div></div>`;
     $("dl").onclick = () => download(RUN.run_id);
   } else {
-    $("verdict").innerHTML = `<div class="verdict rise"><div class="top">
+    $("verdict").innerHTML = regBanner + `<div class="verdict rise"><div class="top">
       <div class="subj" style="margin-bottom:4px">No figure in ${esc(file)} is wrong.</div>
       <div class="cap">Every labelled cell computes what its label claims.</div></div></div>`;
   }

@@ -288,8 +288,13 @@ The second is the honest one. `Budget!C15`, a subtotal stopping one row short, w
 Stated plainly, because a system that audits other people's work should be honest about its own limits.
 
 - **Recalculation proves mechanical soundness, not intent.** Where the workbook no longer holds enough information to infer what the author meant, the clearest case being a reference whose target was deleted, the repair is labelled `needs_human_intent` rather than presented as proven.
+- **A hardcode is only found where a pattern exists to break.** The detector reports a cell that deviates from its region's norm, so a hardcoded constant sitting in a column of five different formulas has nothing to deviate from. Found by planting exactly that and watching Cassandra miss it. This covers most of a real model, where rows and columns are dragged, and not all of it.
+- **Recall is traded for precision on purpose.** The Adjudicator is instructed to be conservative, because a false alarm costs an analyst an hour and teaches them to ignore the tool. A genuine defect can therefore be talked out of, as one was on the budget fixture.
 - **`formulas` does not implement every Excel function.** Anything it cannot evaluate degrades to unverified and is never reported as proven.
 - **Repairs are proposed, not written back.** Cassandra never modifies your workbook. Every patch is applied to a temporary copy.
+- **One audit at a time per instance.** A process level lock, so a second request is told the service is busy rather than queued.
+- **The deployed endpoint is unauthenticated.** Fine for judging, wrong for anything else: anyone with the URL can spend the project's model quota.
+- **Google Sheets import is tested but not yet confirmed against a live sheet.** Every path is covered with the call to Google stubbed; the last mile needs a real shared link.
 
 ---
 
