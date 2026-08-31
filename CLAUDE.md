@@ -340,15 +340,31 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 - Project direction locked: continuous regression sentinel with closed loop verified repair
 - Competitive and academic landscape researched, differentiation established
 - Public repository created at `github.com/ahammadshawki8/Cassandra`
-- Python 3.11 confirmed available (system default is 3.14, which is too new for the scientific stack)
-- This file
+- Python 3.11 venv established at `.venv` (system default is 3.14, too new for the scientific stack)
+- **Calculation oracle de risked.** `formulas` 1.3.4 installs and imports cleanly on 3.11. This was the single largest technical risk and it is now retired.
+- `google-adk` 2.8.0 and `google-genai` 2.20.0 installed and importing
+- `opentelemetry-sdk` 1.42.1 arrives as an ADK dependency, so the observability layer needs no extra install
+- This file, committed and pushed
 
 **In progress**
-- Dependency install verification on the 3.11 venv (`formulas`, `openpyxl`, `networkx`, `google-adk`, `google-genai`)
+- Google Cloud CLI download and extraction to `C:\Users\Shawki\google-cloud-sdk` (bundled python build, no admin rights required)
 
 **Blocked / needs the user**
-- `gcloud` CLI is not installed on this machine
-- GCP project ID and billing confirmation needed
+- `gcloud auth login` must be run by the user, it requires a browser
+- GCP project ID and confirmation that billing is enabled
+
+**Verified environment**
+
+| Component | Version |
+| --- | --- |
+| Python (project venv) | 3.11 |
+| `formulas` | 1.3.4 |
+| `google-adk` | 2.8.0 |
+| `google-genai` | 2.20.0 |
+| `opentelemetry-sdk` | 1.42.1 |
+| `networkx` | 3.6.1 |
+| `openpyxl` | 3.1.5 |
+| GitHub account | `ahammadshawki8` |
 
 **Open risks**
 - `formulas` may not evaluate every Excel function. Mitigation: the demo workbook is authored by us, so it uses only well supported functions. Unevaluable formulas degrade to "unverified" rather than failing.
