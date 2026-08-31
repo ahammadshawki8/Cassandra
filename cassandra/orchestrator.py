@@ -128,7 +128,6 @@ class AuditRun:
     results: list[Result] = field(default_factory=list)
     trace: list[dict[str, Any]] = field(default_factory=list)
     headline: dict[str, Any] = field(default_factory=dict)
-    grid: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> str:
         payload = asdict(self)
@@ -284,7 +283,6 @@ class Auditor:
 
         run.results.sort(key=lambda r: -r.materiality)
         run.headline = self._headline(run, book, baseline)
-        run.grid = self._grid(book, baseline)
         run.finished_at = time.time()
         self._emit(
             run, "done",
@@ -550,27 +548,6 @@ class Auditor:
             path, result.cell, proposal.formula, proposal.predicted_value,
             radius, baseline, sheets,
         )
-
-    def _grid(self, book, baseline) -> dict[str, Any]:
-        """A compact rendering of the workbook for the dashboard."""
-        sheets: dict[str, Any] = {}
-        for name, sheet in book.sheets.items():
-            cells = {}
-            for key, cell in sheet.cells.items():
-                cells[key.split("!", 1)[1]] = {
-                    "r": cell.ref.row,
-                    "c": cell.ref.col,
-                    "f": cell.formula,
-                    "v": baseline.values.get(key, cell.value),
-                    "l": cell.label,
-                    "fmt": cell.number_format,
-                }
-            sheets[name] = {
-                "rows": sheet.max_row,
-                "cols": sheet.max_col,
-                "cells": cells,
-            }
-        return sheets
 
     def _headline(self, run, book, baseline) -> dict[str, Any]:
         """The single number a reader of this model would quote, and its fate."""

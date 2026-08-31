@@ -206,8 +206,58 @@ def runs() -> list[dict[str, Any]]:
 
 
 @app.get("/api/runs/{run_id}")
-def run_detail(run_id: str) -> dict[str, Any]:
-    return store.get(run_id) or {"error": "not found"}
+def run_detail(run_id: str) -> JSONResponse:
+    """One run, trimmed to what the interface actually renders.
+
+    Returned through JSONResponse rather than as a plain dict so the body and
+    its Content-Length are produced in one pass. Values that arrive from
+    Firestore as numpy scalars serialize to a different byte length than
+    FastAPI's default encoder measures, which raises a protocol error mid
+    response and truncates it.
+    """
+    run = store.get(run_id)
+    if not run:
+        return JSONResponse({"error": "not found"}, status_code=404)
+
+    trimmed = {
+        k: run.get(k)
+        for k in (
+            "run_id", "workbook", "started_at", "finished_at",
+            "sheets", "cell_count", "formula_count", "headline",
+        )
+    }
+    trimmed["results"] = [
+        {
+            "cell": r.get("cell"),
+            "status": r.get("status"),
+            "severity": r.get("severity"),
+            "explanation": r.get("explanation"),
+            "summary": r.get("summary"),
+            "original_formula": r.get("original_formula"),
+            "final_formula": r.get("final_formula"),
+            "value_before": r.get("value_before"),
+            "value_after": r.get("value_after"),
+            "needs_human_intent": r.get("needs_human_intent"),
+            "attempts": [
+                {"attempt": a.get("attempt"), "passed": a.get("passed"),
+                 "reason": a.get("reason"), "formula": a.get("formula")}
+                for a in (r.get("attempts") or [])
+            ],
+        }
+        for r in (run.get("results") or [])
+    ]
+    return JSONResponse(json.loads(json.dumps(trimmed, default=_plain)))
+
+
+def _plain(value: Any) -> Any:
+    """Coerce anything the encoder cannot handle, numpy scalars especially."""
+    item = getattr(value, "item", None)
+    if callable(item):
+        try:
+            return item()
+        except Exception:
+            pass
+    return str(value)
 
 
 @app.post("/api/dismiss/{cell}")
