@@ -348,6 +348,8 @@ Every one of these was real and would have shipped:
 
 11. **`Content-Length` overruns, twice.** Values reaching Firestore as numpy scalars encode to a different byte length than the default encoder measures when setting the header, so the body overran it mid response. Fixed on the detail route, then found again on the list route, which had the same shape and had simply not been checked.
 
+12. **A clean workbook displayed another workbook's corrections.** `paint()` wrote the corrections section only when the run had corrections to write, so selecting a healthy workbook after a broken one left the previous run's cards on screen. The result was the worst sentence the interface could produce: "No figure in clean_amortisation.xlsx is wrong" sitting directly above five corrections belonging to `saas_projection_v11`. It landed on precisely the screen that carries the zero false positive claim, and it was invisible from the API, which returned the correct empty payload throughout. Every section is now written on each paint, including when it is written empty.
+
 ### Cloud Run: CPU allocation is a correctness requirement here
 
 The Pub/Sub push is answered immediately and the audit runs on a worker thread, because holding the request open past the acknowledgement deadline would guarantee duplicate deliveries. By default Cloud Run throttles a container to nearly no CPU once it has finished responding, which makes that thread's progress best effort rather than guaranteed.

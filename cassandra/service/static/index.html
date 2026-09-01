@@ -696,10 +696,20 @@ function paint() {
       <div class="cap">Every labelled cell computes what its label claims.</div></div></div>`;
   }
 
+  // Every section is written on each paint, including when it is written empty.
+  // Leaving a section alone because this run has nothing to put in it keeps the
+  // previous run's contents on screen: selecting a clean workbook after a broken
+  // one showed "no figure is wrong" above the other workbook's corrections.
+  cards.clear();
+
   if (fixed.length) {
     $("corrnote").textContent = `${fixed.length} proven by recalculation`;
     $("fixes").innerHTML = fixed.map(fixRow).join("");
     show("corrsect");
+  } else {
+    $("corrnote").textContent = "";
+    $("fixes").innerHTML = "";
+    $("corrsect").classList.add("hidden");
   }
   const settled = (RUN.settled || []).map(c =>
     `<span class="aside">${ico("i-check", 11)}<code>${esc(c)}</code> settled earlier, not raised again</span>`);
@@ -707,6 +717,9 @@ function paint() {
     $("asides").innerHTML = left.map(r => `<span class="aside">${ico("i-dot", 11)}<code>${esc(r.cell)}</code> ${
       r.status === "dismissed" ? "legitimate as written" : "resolved upstream"}</span>`).concat(settled).join("");
     show("asidesect");
+  } else {
+    $("asides").innerHTML = "";
+    $("asidesect").classList.add("hidden");
   }
 
   // Settling a finding is a judgement about this model, so it holds for every

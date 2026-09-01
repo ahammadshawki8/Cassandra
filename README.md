@@ -294,6 +294,38 @@ Cloud Run scales to zero, so the service costs nothing idle. One audit of the de
 
 ---
 
+## Proof it runs on Google Cloud
+
+Taken from the live project console while the service was serving. Every service in the architecture diagram above appears in at least one of them.
+
+**Cloud Run.** The `cassandra` service in `us-central1`, scaling automatically from a minimum of zero, with request count, request latency, container instance count and billable instance time over the preceding day.
+
+![Cloud Run service details for cassandra in us-central1](docs/cloud/cloud-run-service.png)
+
+**Cloud Storage.** The ingestion bucket `cassandra-507217-workbooks`, holding the workbooks whose arrival triggered an audit. Dropping a file here is the entire interface for the autonomous path: there is no button to press and no session to start.
+
+![The cassandra-507217-workbooks bucket listing uploaded workbooks](docs/cloud/cloud-storage-bucket.png)
+
+**Pub/Sub.** The `cassandra-push` subscription, active, bound to the `cassandra-workbook-landed` topic and pushing to the service. Oldest unacked message age sits at zero, which is what a push path that is keeping up looks like.
+
+![The cassandra-push subscription, active, on the cassandra-workbook-landed topic](docs/cloud/pubsub-subscription.png)
+
+**Cloud Logging.** Requests reaching the deployed revision, filtered to `resource.type="cloud_run_revision"` and `resource.labels.service_name="cassandra"`. The run detail fetches near the bottom are the console reading back a stored audit.
+
+![Logs Explorer showing requests served by the cassandra revision](docs/cloud/cloud-run-logs.png)
+
+**Firestore and Vertex AI.** These two are better checked than photographed, because the deployed service reports them itself. `/api/health` returns the store it is persisting to and the model it is calling, and you can open it without credentials:
+
+```
+https://cassandra-gibp4zik7a-uc.a.run.app/api/health
+```
+
+![The health endpoint reporting firestore, gemini-3.5-flash and vertex TRUE](docs/cloud/health-endpoint.jpg)
+
+`"store": "firestore"` means run state is in Firestore rather than in process memory, and `"vertex": "TRUE"` means the Gemini 3.5 Flash calls go through Vertex AI rather than a bare API key. Both are read from the running container, not from configuration on someone's laptop.
+
+---
+
 ## Prior art, and how this differs
 
 Spreadsheet error detection is a mature field. Cassandra stands on it rather than claiming to be unprecedented.
