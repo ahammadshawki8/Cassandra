@@ -350,6 +350,12 @@ Every one of these was real and would have shipped:
 
 12. **A clean workbook displayed another workbook's corrections.** `paint()` wrote the corrections section only when the run had corrections to write, so selecting a healthy workbook after a broken one left the previous run's cards on screen. The result was the worst sentence the interface could produce: "No figure in clean_amortisation.xlsx is wrong" sitting directly above five corrections belonging to `saas_projection_v11`. It landed on precisely the screen that carries the zero false positive claim, and it was invisible from the API, which returned the correct empty payload throughout. Every section is now written on each paint, including when it is written empty.
 
+13. **The corrected download died with the container.** A corrected copy is rebuilt from the source workbook on demand, and the source lived only on the instance's local disk. Cloud Run scales to zero, so every stored run's download broke the moment the service went idle, which is the normal case rather than an edge one. With judging running for a month after submission, effectively every historical download would have failed. The source is now archived to Cloud Storage under `runs/{run_id}/` when the audit finishes, and the download route restores from there when the local file is gone. The archive lands in the same bucket that receives workbooks, so the push endpoint skips that prefix: without it the service audits its own archive, archives that run, and never stops.
+
+14. **The event replay straddled run boundaries.** A dashboard connecting late was sent the last 80 events regardless of which run they belonged to, so it received the tail of one audit and the head of the next and drew findings from both as though one audit had produced them. Replay now starts at the most recent `woken`, the event that marks the beginning of a run.
+
+15. **`/api/audit` accepted any path on the container, and lied when busy.** It opened whatever path the caller named, on an unauthenticated endpoint, which is a filesystem probe rather than a demo button. It also returned `{"started": ...}` while an audit was already running, when the worker would immediately publish "busy" and drop the request. It now resolves inside `demo/` and reports the conflict the way the upload route does.
+
 ### Cloud Run: CPU allocation is a correctness requirement here
 
 The Pub/Sub push is answered immediately and the audit runs on a worker thread, because holding the request open past the acknowledgement deadline would guarantee duplicate deliveries. By default Cloud Run throttles a container to nearly no CPU once it has finished responding, which makes that thread's progress best effort rather than guaranteed.
@@ -395,7 +401,7 @@ So one of two on an unfamiliar shape. The miss is a precision choice rather than
 | Chain resize | synthetic pointer drags at three widths | 330 to 500, clamps at 620 and 260, persisted |
 | Rejections | CSV, renamed file, private sheet, .xls, empty, oversized | all refused with actionable text |
 
-52 tests passing.
+77 tests passing.
 
 **The check that mattered most:** downloading the corrected workbook, reparsing it, and recalculating from scratch produced `Operating Income -1,704,250`, the same figure the interface reports. The number on screen is the number in the file.
 

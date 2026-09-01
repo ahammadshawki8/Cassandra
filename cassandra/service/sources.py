@@ -133,6 +133,56 @@ def from_bucket(bucket: str, blob_name: str) -> Source:
     return Source(path=path, name=os.path.basename(blob_name), origin=f"gs://{bucket}")
 
 
+# Archived sources live under this prefix. The push endpoint skips it, because
+# the bucket that receives workbooks is the same one that keeps them and an
+# archive write would otherwise fire OBJECT_FINALIZE and audit itself forever.
+RUN_PREFIX = "runs"
+
+
+def archive_key(run_id: str, workbook_path: str) -> str:
+    """Where a run's source workbook is kept so it outlives the container."""
+    name = re.split(r"[\\/]", workbook_path or "")[-1] or "workbook.xlsx"
+    return f"{RUN_PREFIX}/{run_id}/{name}"
+
+
+def archive(bucket: str, run_id: str, source_path: str) -> None:
+    """Keep the source workbook so a corrected copy can be rebuilt later.
+
+    Cloud Run scales to zero, so the local file a run was audited from is gone
+    the moment the instance recycles. Without this, every stored run's corrected
+    download stops working as soon as the service goes idle, which is the normal
+    case rather than an edge one.
+    """
+    if not bucket or not os.path.exists(source_path):
+        return
+    from google.cloud import storage
+
+    storage.Client().bucket(bucket).blob(
+        archive_key(run_id, source_path)
+    ).upload_from_filename(source_path)
+
+
+def restore(bucket: str, run_id: str, workbook_path: str) -> str:
+    """Fetch a run's archived source workbook back onto local disk."""
+    if not bucket:
+        raise SourceError(
+            "The original workbook is no longer on this instance and no archive "
+            "bucket is configured, so a corrected copy cannot be rebuilt."
+        )
+    from google.cloud import storage
+
+    key = archive_key(run_id, workbook_path)
+    dest = os.path.join(_workdir(), f"{run_id}.{key.rsplit('/', 1)[-1]}")
+    blob = storage.Client().bucket(bucket).blob(key)
+    if not blob.exists():
+        raise SourceError(
+            "The original workbook for this run was not archived, so a corrected "
+            "copy cannot be rebuilt. Run the audit again to download one."
+        )
+    blob.download_to_filename(dest)
+    return dest
+
+
 def corrected_copy(source_path: str, patches: dict[str, str]) -> str:
     """Write a copy of the workbook with every verified correction applied.
 

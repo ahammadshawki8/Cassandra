@@ -208,7 +208,7 @@ pytest -q
 Expected output:
 
 ```
-62 passed
+77 passed
 ```
 
 No Google Cloud credentials, no network access and no model calls are needed. The one
@@ -218,7 +218,7 @@ because a test that depends on somebody else's sheet staying shared is not a tes
 | File | Count | What it pins down |
 | --- | --- | --- |
 | `tests/test_core.py` | 36 | Reference parsing and R1C1 normalisation, the dependency graph and blast radius, region clustering, and every failure mode of the Verifier |
-| `tests/test_service.py` | 26 | Every way a workbook gets in, every refusal, the corrected copy, revision lineage, and settled findings |
+| `tests/test_service.py` | 41 | Every way a workbook gets in, every refusal, the corrected copy, revision lineage, settled findings, source archiving, event replay, and the sample route path guard |
 
 The Verifier tests are the ones worth reading. They assert that it **rejects** a correct
 patch carrying a hallucinated predicted value, a patch that changes nothing, a patch that

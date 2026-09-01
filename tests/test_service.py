@@ -276,3 +276,114 @@ class TestSettledFindings:
         run = Auditor(use_agents=False, dismissed={"Model!B6"}).audit(str(path))
         assert "Model!B6" in run.settled
         assert all(r.cell != "Model!B6" for r in run.results)
+
+
+class TestSourceArchive:
+    """A corrected download has to survive the container it was audited on.
+
+    Cloud Run scales to zero, so the local file a run was audited from is gone
+    the moment the instance recycles. Every stored run's download depended on
+    that file still being there.
+    """
+
+    def test_the_archive_key_is_scoped_to_the_run(self):
+        key = sources.archive_key("abc123", "/tmp/cassandra/model_v11.xlsx")
+        assert key == "runs/abc123/model_v11.xlsx"
+
+    def test_a_windows_source_path_still_yields_a_clean_key(self):
+        key = sources.archive_key("abc123", r"C:\Users\a\model.xlsx")
+        assert key == "runs/abc123/model.xlsx"
+
+    def test_a_nameless_source_still_produces_a_key(self):
+        assert sources.archive_key("abc123", "") == "runs/abc123/workbook.xlsx"
+
+    def test_archiving_without_a_bucket_is_a_no_op_not_a_crash(self, tmp_path):
+        src = tmp_path / "model.xlsx"
+        src.write_bytes(b"PK\x03\x04")
+        sources.archive("", "abc123", str(src))
+
+    def test_archiving_a_missing_file_is_a_no_op_not_a_crash(self):
+        sources.archive("some-bucket", "abc123", "/no/such/file.xlsx")
+
+    def test_restoring_without_a_bucket_explains_itself(self):
+        with pytest.raises(sources.SourceError) as e:
+            sources.restore("", "abc123", "model.xlsx")
+        assert "no archive bucket" in str(e.value)
+
+
+class TestPushEndpointGuards:
+    """The bucket that receives workbooks is the one that keeps their archives."""
+
+    def test_the_archive_prefix_is_recognisable(self):
+        key = sources.archive_key("abc123", "model.xlsx")
+        assert key.startswith(f"{sources.RUN_PREFIX}/")
+
+    def test_an_ordinary_upload_is_not_mistaken_for_an_archive(self):
+        assert not "saas_projection_v11.xlsx".startswith(f"{sources.RUN_PREFIX}/")
+
+
+class TestEventReplay:
+    """A dashboard connecting late must see one audit, not a blend of two."""
+
+    def _bus_with_two_runs(self):
+        from cassandra.service.app import Bus
+
+        bus = Bus()
+        for event in [
+            {"kind": "woken", "message": "run A"},
+            {"kind": "confirmed", "cell": "A1"},
+            {"kind": "stored", "run_id": "aaa"},
+            {"kind": "woken", "message": "run B"},
+            {"kind": "confirmed", "cell": "B2"},
+        ]:
+            bus.publish(event)
+        return bus
+
+    def _drain(self, q):
+        out = []
+        while not q.empty():
+            out.append(q.get_nowait())
+        return out
+
+    def test_replay_starts_at_the_most_recent_run(self):
+        replayed = self._drain(self._bus_with_two_runs().subscribe())
+        cells = [e.get("cell") for e in replayed if e.get("cell")]
+        assert cells == ["B2"], "events from the previous run leaked into the replay"
+        assert replayed[0]["kind"] == "woken"
+
+    def test_a_bus_that_never_saw_a_run_still_replays(self):
+        from cassandra.service.app import Bus
+
+        bus = Bus()
+        bus.publish({"kind": "duplicate", "message": "nothing running"})
+        assert len(self._drain(bus.subscribe())) == 1
+
+
+class TestSampleAuditRoute:
+    """The sample button is unauthenticated, so it may only reach demo/."""
+
+    @pytest.fixture(scope="class")
+    def client(self):
+        from fastapi.testclient import TestClient
+
+        from cassandra.service.app import app
+
+        return TestClient(app)
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "../cassandra/service/app.py",
+            "/etc/passwd",
+            "demo/../README.md",
+            r"..\..\Windows\win.ini",
+        ],
+    )
+    def test_paths_outside_demo_are_refused(self, client, path):
+        body = client.post("/api/audit", json={"path": path}).json()
+        assert "error" in body, f"{path} was accepted"
+        assert "no such sample workbook" in body["error"]
+
+    def test_a_workbook_that_does_not_exist_is_refused(self, client):
+        body = client.post("/api/audit", json={"path": "demo/nope.xlsx"}).json()
+        assert "no such sample workbook" in body["error"]

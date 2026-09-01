@@ -67,9 +67,23 @@ class Bus:
                 pass
 
     def subscribe(self) -> queue.Queue:
+        """A dashboard that connects mid audit gets that audit so far, and no more.
+
+        Replaying a fixed number of events straddles run boundaries: a client
+        connecting after two audits receives the tail of one and the head of the
+        next, and draws findings from both as though a single audit had produced
+        them. Replay therefore starts at the most recent "woken", which is the
+        event that marks the beginning of a run.
+        """
         q: queue.Queue = queue.Queue(maxsize=1000)
         with self._lock:
-            for event in self._history[-80:]:
+            for i in range(len(self._history) - 1, -1, -1):
+                if self._history[i].get("kind") == "woken":
+                    start = i
+                    break
+            else:
+                start = max(0, len(self._history) - 80)
+            for event in self._history[start:][-300:]:
                 q.put_nowait(event)
             self._subscribers.append(q)
         return q
@@ -114,6 +128,18 @@ def _audit(path: str, source: str, label: str = "") -> None:
             on_event=bus.publish, dismissed=store.dismissals(path)
         ).audit(path)
         _sources[run.run_id] = path
+
+        # The corrected download is rebuilt from the source workbook on demand,
+        # and this container's disk does not survive scaling to zero. Archiving
+        # the source is what keeps that download working for a run opened days
+        # later rather than only for the person who watched it happen.
+        try:
+            sources.archive(BUCKET, run.run_id, path)
+        except Exception as exc:
+            bus.publish({
+                "t": 0, "kind": "agent_error",
+                "message": f"could not archive the source workbook: {exc}",
+            })
 
         # What is newly broken since the last revision belongs in the record,
         # not only in the live stream. Published events reach whoever happens to
@@ -196,6 +222,12 @@ async def pubsub(request: Request) -> JSONResponse:
     if not name.lower().endswith((".xlsx", ".xlsm")):
         return JSONResponse({"skipped": f"not a workbook: {name}"}, status_code=204)
 
+    # Archived sources are written back into this same bucket, which fires the
+    # very notification being handled here. Without this the service audits its
+    # own archive, archives that run, and never stops.
+    if name.startswith(f"{sources.RUN_PREFIX}/"):
+        return JSONResponse({"skipped": "archived source, not a new workbook"}, status_code=204)
+
     if not store.claim(message_id):
         bus.publish({
             "t": 0, "kind": "duplicate",
@@ -220,13 +252,26 @@ async def pubsub(request: Request) -> JSONResponse:
 
 @app.post("/api/audit")
 async def audit_local(request: Request) -> dict[str, Any]:
-    """Kick off an audit of a workbook already on disk. Used for local demos."""
+    """Audit one of the workbooks shipped with the project. Powers the sample button.
+
+    The path is resolved inside `demo/` and rejected if it escapes. The endpoint
+    is unauthenticated, and an unauthenticated endpoint that opens any path the
+    caller names is a filesystem probe rather than a demo button.
+    """
     body = await request.json()
-    path = body.get("path", "demo/saas_projection_v11.xlsx")
-    if not os.path.exists(path):
-        return {"error": f"no such workbook: {path}"}
+    requested = body.get("path", "demo/saas_projection_v11.xlsx")
+
+    demo_dir = os.path.realpath(os.path.join(os.path.dirname(HERE), "..", "demo"))
+    path = os.path.realpath(os.path.join(demo_dir, os.path.basename(str(requested))))
+    if os.path.dirname(path) != demo_dir or not os.path.exists(path):
+        return {"error": f"no such sample workbook: {requested}"}
+
+    # _start reports the conflict; _audit would accept the request, publish
+    # "busy" to whoever happened to be watching, and drop it silently.
+    if _running.locked():
+        return {"error": "An audit is already running. Wait for it to finish."}
     threading.Thread(target=_audit, args=(path, path), daemon=True).start()
-    return {"started": path}
+    return {"started": os.path.basename(path)}
 
 
 def _start(src: sources.Source) -> dict[str, Any]:
@@ -280,6 +325,16 @@ def corrected(run_id: str):
         return JSONResponse({"error": "This run produced no verified corrections."}, status_code=400)
 
     source_path = _sources.get(run_id) or run.get("workbook", "")
+    if not os.path.exists(source_path):
+        try:
+            source_path = sources.restore(BUCKET, run_id, run.get("workbook", ""))
+        except sources.SourceError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=410)
+        except Exception as exc:
+            return JSONResponse(
+                {"error": f"Could not retrieve the original workbook: {exc}"},
+                status_code=410,
+            )
     try:
         out = sources.corrected_copy(source_path, patches)
     except sources.SourceError as exc:
