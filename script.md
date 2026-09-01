@@ -31,7 +31,7 @@ run, so nothing has to be staged.
 
 ## Act one · why this exists
 
-### 0:00 — Slide 1 · cold open
+### 0:00 · Slide 1 · cold open
 
 > **SHOW:** `01-cold-open.png`, or cut to Excel with `saas_projection_v11.xlsx` open on the
 > PL sheet, cell C8 selected so the formula bar reads `=C6+C7`.
@@ -52,14 +52,14 @@ run, so nothing has to be staged.
 
 > Pause. Do not speak over the number.
 
-### 0:08 — Slide 2 · the reveal
+### 0:08 · Slide 2 · the reveal
 
 > **ADVANCE** to `02-the-reveal.png` on the word "lost".
 
 "It lost one point seven million. One character in one formula, and every number
 downstream of it is wrong."
 
-### 0:16 — Slide 3 · the problem
+### 0:16 · Slide 3 · the problem
 
 > **ADVANCE** on "untested".
 
@@ -70,32 +70,32 @@ deals, and set national policy, and almost none of them are under test."
 
 "A wrong formula looks exactly like a right one."
 
-### 0:26 — Slide 4 · 94%
+### 0:26 · Slide 4 · 94%
 
 > **ADVANCE** on "ninety four".
 
 "Ninety four percent of spreadsheets contain at least one error."
 
-### 0:31 — Slide 5 · 95%
+### 0:31 · Slide 5 · 95%
 
 > **ADVANCE** on "ninety five".
 
 "Ninety five percent of the financial models KPMG audited had major errors."
 
-### 0:36 — Slide 6 · the gap
+### 0:36 · Slide 6 · the gap
 
 > **ADVANCE** on "why". Let both bars be on screen before the next sentence.
 
 "And this is why none of it ever gets fixed. Ask the people who build these models how
 often they make a mistake and they say fourteen percent. The measured rate is eighty six."
 
-### 0:46 — Slide 7 · the line
+### 0:46 · Slide 7 · the line
 
 > **ADVANCE** on "Nobody". Hold this slide for the full sentence, then one beat of silence.
 
 "Nobody audits a spreadsheet, because nobody believes theirs is the broken one."
 
-### 0:53 — Slide 8 · it has happened before
+### 0:53 · Slide 8 · it has happened before
 
 > **ADVANCE** on "Reinhart".
 
@@ -103,27 +103,27 @@ often they make a mistake and they say fourteen percent. The measured rate is ei
 omitted five rows. JPMorgan's London Whale loss involved a copy and paste error inside a
 six and a half billion dollar hole."
 
-### 1:02 — Slide 9 · Cassandra
+### 1:02 · Slide 9 · Cassandra
 
 > **ADVANCE** on the name.
 
 "Cassandra is continuous integration for the spreadsheets that run your company."
 
-### 1:07 — Slide 10 · it starts itself
+### 1:07 · Slide 10 · it starts itself
 
 > **ADVANCE** on "does not wait".
 
 "It does not wait to be asked. A workbook lands in a bucket and the fleet wakes up on its
 own."
 
-### 1:14 — Slide 11 · the five steps
+### 1:14 · Slide 11 · the five steps
 
 > **ADVANCE** on "maps". Point at each card as you name it.
 
 "It maps the model into a formula dependency graph, hunts for candidates, judges which are
 real, and then two steps that no other tool has."
 
-### 1:24 — Slide 12 · three questions
+### 1:24 · Slide 12 · three questions
 
 > **ADVANCE** on "three".
 
@@ -131,7 +131,7 @@ real, and then two steps that no other tool has."
 label claims. Is this a defect or a legitimate modelling choice. And what is the correct
 repair. Everything else is deterministic code."
 
-### 1:36 — Slide 13 · it proves the fix
+### 1:36 · Slide 13 · it proves the fix
 
 > **ADVANCE** on "does not show you".
 
@@ -140,7 +140,7 @@ does not show you the fix. It applies the fix to a copy, recalculates the entire
 and asks two questions: did the target move exactly as predicted, and did anything move
 that should not have. Either answer wrong and the correction is rejected."
 
-### 1:50 — Slide 14 · the guarantee
+### 1:50 · Slide 14 · the guarantee
 
 > **ADVANCE** on "asks the model nothing". Hold.
 
@@ -153,7 +153,7 @@ proven to itself."
 
 One continuous story. Do not jump between features.
 
-### 1:58 — Slide 15, then **LIVE** · the bucket
+### 1:58 · Slide 15, then **LIVE** · the bucket
 
 > **ADVANCE** to slide 15, speak the first line, then **CUT TO THE CLOUD CONSOLE.**
 > Drag `saas_projection_v11.xlsx` into the bucket. Show the object appear, then the
@@ -162,7 +162,7 @@ One continuous story. Do not jump between features.
 "A file lands in a bucket. Nobody presses anything. Cloud Storage fires an event, Pub/Sub
 delivers it, and Cloud Run wakes from zero."
 
-### 2:10 — **LIVE** · the fleet works
+### 2:10 · **LIVE** · the fleet works
 
 > **STAY LIVE.** Switch to the Cassandra console. The reasoning chain on the right is
 > streaming. Do not narrate every line.
@@ -176,7 +176,7 @@ delivers it, and Cloud Run wakes from zero."
 labelled Operating Income. It computes gross profit plus operating expenses. The label and
 the formula disagree, and only a model that reads English catches that."
 
-### 2:28 — **LIVE** · the rejection
+### 2:28 · **LIVE** · the rejection
 
 > **STAY LIVE.** When the progress header turns amber and reads "Correction rejected,
 > revising", **stop talking and hold for two full seconds.** This is the most important
@@ -189,7 +189,7 @@ hold, so it was rejected and sent back with the reason it failed."
 
 "Second attempt. Proven."
 
-### 2:42 — **LIVE** · the result
+### 2:42 · **LIVE** · the result
 
 > **STAY LIVE** on the headline card. Slide 19 is the same figures if you need a clean
 > frame instead.
@@ -202,7 +202,7 @@ point seven million loss."
 
 "Operating expenses added to gross profit instead of subtracted. One character."
 
-### 2:56 — Slide 21 · the latent defect
+### 2:56 · Slide 21 · the latent defect
 
 > **CUT TO SLIDE 21.** This is the most sophisticated finding in the project, so give it
 > the clean frame rather than fighting the browser.
@@ -213,7 +213,7 @@ broken, because it has been cut off from its driver and goes stale the moment an
 updates that assumption. Cassandra proves it by changing the driver and showing the
 patched and unpatched workbooks diverge. A defect that has no wrong value yet."
 
-### 3:10 — Slide 22, then **LIVE** · the corrected file
+### 3:10 · Slide 22, then **LIVE** · the corrected file
 
 > **ADVANCE** to slide 22, then **CUT LIVE**: click Download corrected workbook, open the
 > file in Excel, select `PL!C8` so the formula bar shows `=C6-C7`, and show Operating
@@ -223,7 +223,7 @@ patched and unpatched workbooks diverge. A defect that has no wrong value yet."
 applied and everything uncertain deliberately left alone. Recalculate it yourself. The
 number on the screen is the number in the file."
 
-### 3:22 — Slide 23, then **LIVE** · the regression
+### 3:22 · Slide 23, then **LIVE** · the regression
 
 > **ADVANCE** to slide 23. **CUT LIVE** to the history rail showing `saas_projection_v11`
 > above `saas_projection_v12`. Open the v12 run so the amber "Newly broken in this
@@ -234,7 +234,7 @@ and somebody has typed a twelve percent uplift straight into a revenue cell. Cas
 pairs the two revisions and reports only what is new. This is the question no spreadsheet
 tool on the market answers: this was fine last week, what broke since."
 
-### 3:36 — Slide 24 · nothing is wrong
+### 3:36 · Slide 24 · nothing is wrong
 
 > **ADVANCE** on "one more". If you have the time, drop `clean_amortisation.xlsx` live.
 
@@ -247,14 +247,14 @@ worse than no tool at all."
 
 ## The close
 
-### 3:46 — Slide 25 · architecture
+### 3:46 · Slide 25 · architecture
 
 > **ADVANCE** on "three questions".
 
 "Three questions go to Gemini. Everything else, including the verification that decides
 whether the model was right, is deterministic code."
 
-### 3:51 — Slide 26 · no tools
+### 3:51 · Slide 26 · no tools
 
 > **ADVANCE** on "hold no tools".
 
@@ -262,7 +262,7 @@ whether the model was right, is deterministic code."
 network, so the worst a prompt injected into a cell label can do is cause a wrong
 judgement that recalculation then rejects."
 
-### 3:56 — Slide 29 · close
+### 3:56 · Slide 29 · close
 
 > **JUMP TO SLIDE 29** and hold to the end. Skip 27 and 28 unless you are running short of
 > content; they are there as spares.
@@ -308,10 +308,10 @@ not tell you a single thing it has not proven first."
 
 ## Live segments, in order
 
-1. **1:58 to 2:10** — Cloud Console: drop the file in the bucket, show Pub/Sub and Cloud Run
-2. **2:10 to 2:56** — the console: reasoning chain, the rejection, the result
-3. **3:10 to 3:22** — download the corrected workbook and open it in Excel
-4. **3:22 to 3:36** — the history rail and the newly broken banner
+1. **1:58 to 2:10** · Cloud Console: drop the file in the bucket, show Pub/Sub and Cloud Run
+2. **2:10 to 2:56** · the console: reasoning chain, the rejection, the result
+3. **3:10 to 3:22** · download the corrected workbook and open it in Excel
+4. **3:22 to 3:36** · the history rail and the newly broken banner
 
 Everything else is the deck.
 

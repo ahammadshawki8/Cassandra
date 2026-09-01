@@ -280,6 +280,14 @@ gcloud storage cp demo/saas_projection_v11.xlsx gs://$BUCKET/
 
 Open `$URL` and watch it wake.
 
+> **The service writes to the bucket as well as reading from it.** When an audit finishes,
+> the source workbook is archived under `runs/{run_id}/` so the corrected download can be
+> rebuilt later. Cloud Run scales to zero and takes its local disk with it, so without the
+> archive every stored run's download breaks the moment the service goes idle. The runtime
+> service account therefore needs object write access, not only read. The push endpoint
+> skips the `runs/` prefix, because the archive lands in the bucket it is watching and
+> would otherwise trigger an audit of itself.
+
 > **`--no-cpu-throttling` is not a tuning knob here.** The Pub/Sub push is answered
 > immediately and the audit runs on a worker thread, because holding the request open past
 > the acknowledgement deadline would guarantee duplicate deliveries. By default Cloud Run
@@ -364,7 +372,7 @@ The demo model contains exactly the defects the detectors look for, which makes 
 
 The most important of these is the first. A tool that cries wolf on a healthy workbook is worse than no tool, and on 123 correct formulas it stayed quiet.
 
-The second is the honest one. `Budget!C15`, a subtotal stopping one row short, was detected at 0.45 confidence and then dismissed by the Adjudicator as "likely a subtotal specifically for the first group of items" — a defensible reading of a cell labelled only "Total committed". That is the instructed conservatism working as designed, and it is also a real recall cost. Both directions are stated because only one of them is flattering.
+The second is the honest one. `Budget!C15`, a subtotal stopping one row short, was detected at 0.45 confidence and then dismissed by the Adjudicator as "likely a subtotal specifically for the first group of items", a defensible reading of a cell labelled only "Total committed". That is the instructed conservatism working as designed, and it is also a real recall cost. Both directions are stated because only one of them is flattering.
 
 ## What it cannot do
 
@@ -377,7 +385,7 @@ Stated plainly, because a system that audits other people's work should be hones
 - **Repairs are proposed, not written back.** Cassandra never modifies your workbook. Every patch is applied to a temporary copy.
 - **One audit at a time per instance.** A process level lock, so a second request is told the service is busy rather than queued.
 - **The deployed endpoint is unauthenticated.** Fine for judging, wrong for anything else: anyone with the URL can spend the project's model quota.
-- **Google Sheets import is tested but not yet confirmed against a live sheet.** Every path is covered with the call to Google stubbed; the last mile needs a real shared link.
+- **Google Sheets import brings the values in, and a values only sheet has nothing to audit.** The import path is confirmed against a live shared sheet, but a sheet exported without formulas is parsed, found to contain no computation, and correctly reported as having nothing wrong. What Cassandra audits is how a number was computed.
 
 ---
 

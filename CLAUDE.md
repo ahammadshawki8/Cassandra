@@ -239,17 +239,17 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 
 ## Implementation Plan
 
-### Phase 0 — Foundation and Google Cloud proof
+### Phase 0: Foundation and Google Cloud proof
 
 - [x] Resolve Python toolchain (3.11 venv, verify `formulas` and `google-adk` install)
 - [x] Install and authenticate `gcloud` CLI
 - [x] Create GCP project, enable billing, enable APIs (Vertex AI, Cloud Run, Storage, Pub/Sub, Firestore, Cloud Trace)
 - [x] Create the ingestion bucket and Pub/Sub topic with the object finalize notification
-- [ ] Deploy a stub Cloud Run service and prove the end to end pipe with a dummy file
+- [x] Deploy to Cloud Run and prove the end to end pipe. Went past the stub: the full service is deployed and a bucket drop runs unattended
 - [x] Author the demo workbook: a realistic multi sheet financial model with planted defects, one of which is designed so the first patch attempt fails verification
 - [x] Repository scaffold, `.gitignore`, dependency manifest
 
-### Phase 1 — Deterministic core
+### Phase 1: Deterministic core
 
 - [x] Workbook parser producing a cell level model
 - [x] Formula dependency DAG construction
@@ -258,11 +258,11 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 - [x] Recalculation harness wrapping the calculation oracle
 - [x] Unit tests against the demo workbook with known defect locations
 
-### Phase 2 — Agent fleet
+### Phase 2: Agent fleet
 
 - [x] ADK agent scaffold with Vertex AI and Gemini 3.5 Flash wired
-- [x] Tool layer with per agent scoping enforced
-- [x] Six hunter agents
+- [x] Tool scoping enforced. Went further than planned: the agents hold no tools at all, which is a stronger guarantee than scoping them narrowly
+- [x] Six defect classes hunted. Five are deterministic detectors rather than agents, because only the semantic class needs a model
 - [x] Adjudicator with materiality ranking
 - [x] Patcher producing structured cell edits
 - [x] Verifier with recalculation, predicted versus actual assertion, and rejection reasons
@@ -271,7 +271,7 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 - [ ] OpenTelemetry spans exported to Cloud Trace. Not done: the reasoning chain is written into the run document instead, which is what the interface replays. `opentelemetry-sdk` is present only as an ADK dependency and nothing in this project creates a span.
 - [x] Idempotency on Pub/Sub message ID
 
-### Phase 3 — Operator surface
+### Phase 3: Operator surface
 
 - [x] Live dashboard shell
 - [x] Workbook grid renderer with in place finding highlights
@@ -280,21 +280,21 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 - [x] Before and after value diff
 - [x] Materiality ranked finding list with accept and dismiss
 
-### Phase 4 — Regression sentinel and hardening
+### Phase 4: Regression sentinel and hardening
 
 - [x] Version diff between workbook revisions
-- [ ] Root cause attribution from moved output back to originating edit
+- [~] Root cause attribution. Downstream symptoms are suppressed and attributed to the repair that explains them; tracing a moved output back to an originating edit across revisions is not built
 - [x] Dismissal memory across runs
 - [ ] Lightweight agent registry with capability manifests and versions
-- [ ] README with spin up instructions and prior art section
-- [ ] Architecture diagram asset
-- [ ] Deploy, set min instances to 1 for recording
+- [x] README with spin up instructions, prior art, reproducible testing, and the Google Cloud evidence
+- [x] Architecture diagrams, in `docs/architecture.md` and inline in the README
+- [ ] Set min instances to 1 for recording, and back to 0 afterwards. Currently 0, so the first request after an idle period pays a cold start
 
-### Phase 5 — Submission
+### Phase 5: Submission
 
 - [ ] Demo video (recorded in parallel by teammate)
-- [ ] Devpost write up: features, technologies, data sources, findings and learnings
-- [ ] Track selection finalized
+- [x] Devpost write up in `devpost.md`: features, technologies, data sources, findings and learnings
+- [x] Track selection finalized
 - [ ] Social post with `#AllThingsAgenticHackathon`
 - [ ] Set min instances back to 0
 
@@ -302,7 +302,7 @@ Google Cloud proof is banked in the first sixty seconds: object lands in the buc
 
 ## Current State
 
-**Status:** Phase 3 in progress. Core, agents, and cloud infrastructure all live and working.
+**Status:** Built, deployed, and verified. Every path in the feature list has been exercised against the deployed service, not only under test. Remaining work is the demo video and the Devpost form.
 
 ### Verified working end to end
 
@@ -382,7 +382,7 @@ So one of two on an unfamiliar shape. The miss is a precision choice rather than
 ### Known limitations, stated honestly
 
 - Recalculation proves a repair is mechanically sound. It cannot prove the repair expresses what the author meant. Where the workbook no longer holds enough information to infer intent, the clearest case being a reference whose target was deleted, the repair is labelled `needs_human_intent` rather than presented as proven.
-- **Google Sheets import is covered by tests but not yet confirmed against a live sheet.** Creating one requires a Google account this build process does not have. The export URL, the auditability of what comes back, and every failure path are tested with the network call stubbed; a single link shared as anyone with the link would confirm the last mile.
+- **Google Sheets import is confirmed live, and a values only sheet has nothing to audit.** Run against Google's own public sample sheet on the deployed service: the export URL was built, the live call to `docs.google.com` returned a workbook, and 186 cells across one sheet were parsed and audited in under a second. That sheet holds no formulas, so nothing was found, which is correct rather than a miss. What Cassandra audits is how a number was computed, so a sheet exported without formulas has nothing in it to be wrong.
 - **A hardcode is only found where a pattern exists to break.** The detector reports a cell that deviates from its region's norm, so a hardcoded constant in a column of five different formulas has nothing to deviate from and goes unreported. Found by planting exactly that as the new defect in v12 and watching Cassandra miss it. This covers most of a real model, where rows and columns are dragged, and not all of it.
 - **Recall is deliberately traded for precision.** On the unfamiliar budget workbook one of two planted defects was declined by the Adjudicator on an ambiguous label. That is the instructed behaviour, because a false alarm costs an analyst an hour and teaches them to ignore the tool, but it does mean a genuine defect can be talked out of. The deterministic detector's own confidence is preserved in the run record, so a stricter reading of the same evidence is available without changing the pipeline.
 - **One audit runs at a time per instance.** `_running` is a process level lock. Two people auditing at once on one instance get told the service is busy rather than queued.
@@ -395,15 +395,20 @@ So one of two on an unfamiliar shape. The miss is a precision choice rather than
 | --- | --- | --- |
 | Upload | multipart POST, then the audit run through the interface | 5 corrections, headline -1,704,250 |
 | Download | fetched from the browser, reparsed, recalculated from scratch | matches the interface exactly |
-| Google Sheets | 16 tests with only the call to Google stubbed | export URL, auditability, every error path |
+| Google Sheets | 16 tests with the call stubbed, then a live import on the deployed service | Google's own public sample sheet exported, parsed, and audited: 186 cells, one sheet |
 | Autonomous | file dropped in the bucket on the deployed service, unattended | run 9a5887a773f6, 5 repaired, 114 seconds |
 | Theme | clicked, then read data-theme and computed styles | light and dark, persisted |
 | Chain resize | synthetic pointer drags at three widths | 330 to 500, clamps at 620 and 260, persisted |
 | Rejections | CSV, renamed file, private sheet, .xls, empty, oversized | all refused with actionable text |
+| Download after a redeploy | audited on revision 21, downloaded on revision 22, whose disk never held the source | restored from the archive, recalculated to `-1704250.0006659562`, exact to the float |
+| Regression sentinel | v11 audited, then v12 uploaded to the deployed service | `Revenue!D6 is newly broken in this revision`, in the record and on screen |
+| Archive loop guard | archive written into the bucket that fires the notification | one run per workbook, three archives, nothing re-audited |
+| Run switching | v11 opened, then the clean workbook, reading the rendered DOM | corrections cleared, download button gone, chain replaced |
+| Settle | dismiss then undismiss over HTTP against the deployed service | both accepted, unknown run refused, no residue left on the lineage |
 
 77 tests passing.
 
-**The check that mattered most:** downloading the corrected workbook, reparsing it, and recalculating from scratch produced `Operating Income -1,704,250`, the same figure the interface reports. The number on screen is the number in the file.
+**The check that mattered most:** downloading the corrected workbook, reparsing it, and recalculating from scratch produced `Operating Income -1,704,250`, the same figure the interface reports. The number on screen is the number in the file. Re-checked after the source archive was added, on a container that had never held the original: same figure, to the last decimal place.
 
 ### Deployed and proven in the cloud
 
